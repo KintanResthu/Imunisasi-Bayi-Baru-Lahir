@@ -461,7 +461,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
           <div class="scatter-info-row">
             <div class="info-pill"><span class="pill-label">X:</span><span class="pill-val">Jarak Ke Puskesmas (Km)</span></div>
             <div class="info-pill"><span class="pill-label">Y:</span><span class="pill-val">Total Imunisasi</span></div>
-            <div class="info-pill info-pill-r"><span class="pill-label">ρ (Spearman):</span><span class="pill-val" id="r-value-display">&#8212;</span></div>
+            <div class="info-pill info-pill-r"><span class="pill-label">r (Pearson):</span><span class="pill-val" id="r-value-display">&#8212;</span></div>
             <div class="vsep-inline"></div>
             <div class="sleg-item"><div class="sleg-dot" style="background:#639922;border:1.5px solid #3B6D11;"></div>Q1: Dekat &amp; Tinggi</div>
             <div class="sleg-item"><div class="sleg-dot" style="background:#378ADD;border:1.5px solid #185FA5;"></div>Q2: Jauh &amp; Tinggi</div>
@@ -1139,25 +1139,15 @@ function drawScatterChart(filtered){
   const maxBayi=Math.max(...bVals,1);
 
   const n=xVals.length;
-  // ── Spearman Rank Correlation ──
-  function rankArray(arr){
-    const sorted=[...arr].map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
-    const ranks=new Array(arr.length);
-    let i=0;
-    while(i<sorted.length){
-      let j=i;
-      while(j<sorted.length-1&&sorted[j+1].v===sorted[j].v)j++;
-      const avgRank=(i+j)/2+1;
-      for(let k=i;k<=j;k++)ranks[sorted[k].i]=avgRank;
-      i=j+1;
-    }
-    return ranks;
+  // ── Pearson Correlation ──
+  const meanX=xVals.reduce((a,b)=>a+b,0)/n;
+  const meanY=yVals.reduce((a,b)=>a+b,0)/n;
+  let covXY=0,varX=0,varY=0;
+  for(let i=0;i<n;i++){
+    const dx=xVals[i]-meanX, dy=yVals[i]-meanY;
+    covXY+=dx*dy; varX+=dx*dx; varY+=dy*dy;
   }
-  const rankX=rankArray(xVals);
-  const rankY=rankArray(yVals);
-  let dSqSum=0;
-  for(let i=0;i<n;i++){const d=rankX[i]-rankY[i];dSqSum+=d*d;}
-  const rVal=1-(6*dSqSum)/(n*(n*n-1));
+  const rVal=(varX===0||varY===0)?NaN:covXY/Math.sqrt(varX*varY);
   // Regression line still based on original values for visual
   let sX=0,sY=0,sXY=0,sX2=0;
   xVals.forEach((x,i)=>{sX+=x;sY+=yVals[i];sXY+=x*yVals[i];sX2+=x*x;});
@@ -1282,7 +1272,7 @@ function updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pusF,
   const q4Worst=groups[3].sort((a,b)=>a.imun-b.imun).slice(0,3).map(d=>d.name).join(', ');
 
   let summary=`Tahun <strong>${tahunTeks}</strong>: rata-rata imunisasi <strong>${avgImun.toLocaleString('id-ID')}</strong> dosis per kelurahan. `;
-  summary+=`Korelasi Spearman jarak&#8211;imunisasi bersifat <strong>${arah} ${kuat}</strong> (&rho;&nbsp;=&nbsp;${r}, n&nbsp;=&nbsp;${n}). `;
+  summary+=`Korelasi Pearson jarak&#8211;imunisasi bersifat <strong>${arah} ${kuat}</strong> (r&nbsp;=&nbsp;${r}, n&nbsp;=&nbsp;${n}). `;
   if(!isNaN(rVal)&&rVal<-0.3)summary+=`Semakin jauh akses ke puskesmas, imunisasi cenderung lebih rendah.`;
   else if(!isNaN(rVal)&&rVal<0)summary+=`Ada kecenderungan lemah bahwa wilayah yang jauh sedikit lebih rendah imunisasinya.`;
   else summary+=`Jarak belum menjadi penentu utama aktivitas imunisasi &#8212; faktor lain lebih dominan.`;
@@ -1294,7 +1284,7 @@ function updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pusF,
     {cls:'chip-q2',label:`Q2 Resilient: ${groups[1].length}`},
     {cls:'chip-q3',label:`Q3 Investigasi: ${groups[2].length}`},
     {cls:'chip-q4',label:`Q4 Prioritas: ${groups[3].length}`},
-    {cls:'chip-neutral',label:`ρ = ${r} (Spearman)`},
+    {cls:'chip-neutral',label:`r = ${r} (Pearson)`},
     {cls:'chip-neutral',label:`Avg: ${avgImun.toLocaleString('id-ID')} Dosis`},
   ];
   chipsEl.innerHTML=chipDefs.map(c=>`<span class="stat-chip ${c.cls}">${c.label}</span>`).join('');
