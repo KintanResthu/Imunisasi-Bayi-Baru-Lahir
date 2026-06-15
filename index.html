@@ -485,7 +485,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 </div>
 
 <script>
-// Data variables — loaded from data_encoded.json.gz
+// Data variables — loaded from data_encoded.v2.json.gz
 let data = [];
 let dataBayi = [];
 let dataCoverage = [];
@@ -498,7 +498,7 @@ async function loadAllData() {
   try {
     if (loadingEl) loadingEl.style.display = 'flex';
     // Fetch compressed JSON and decompress in browser
-    const resp = await fetch('data_encoded.json.gz');
+    const resp = await fetch('data_encoded.v2.json.gz');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const ds = new DecompressionStream('gzip');
     const decompressed = resp.body.pipeThrough(ds);
@@ -524,7 +524,7 @@ async function loadAllData() {
     update();
   } catch(err) {
     console.error('Gagal load data:', err);
-    if (loadingEl) loadingEl.innerHTML = '<div style="text-align:center;color:#dc2626;padding:30px"><div style="font-size:36px">&#9888;</div><div style="font-size:16px;font-weight:700;margin:10px 0">Gagal Memuat Data</div><div style="font-size:12px;color:#64748b">Pastikan file data_encoded.json.gz tersedia.<br>Error: ' + err.message + '</div></div>';
+    if (loadingEl) loadingEl.innerHTML = '<div style="text-align:center;color:#dc2626;padding:30px"><div style="font-size:36px">&#9888;</div><div style="font-size:16px;font-weight:700;margin:10px 0">Gagal Memuat Data</div><div style="font-size:12px;color:#64748b">Pastikan file data_encoded.v2.json.gz tersedia.<br>Error: ' + err.message + '</div></div>';
   }
 }
 
