@@ -278,7 +278,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 .qcard-q3 .qcard-desc { color: var(--q3-color); border-color: var(--q3-border); }
 .qcard-q4 .qcard-desc { color: var(--q4-color); border-color: var(--q4-border); }
 .qcard-kel-header {
-  display: grid; grid-template-columns: 1fr 80px 60px;
+  display: grid; grid-template-columns: 1fr 72px 56px 60px;
   font-size: 9px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.5px; opacity: 0.6; padding-bottom: 3px;
 }
@@ -294,7 +294,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 .qcard-q3 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q3-border); }
 .qcard-q4 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q4-border); }
 .qcard-kel-row {
-  display: grid; grid-template-columns: 1fr 80px 60px;
+  display: grid; grid-template-columns: 1fr 72px 56px 60px;
   font-size: 10px; padding: 2px 0; border-bottom: 1px solid; align-items: center; gap: 4px;
 }
 .qcard-q1 .qcard-kel-row { color: var(--q1-color); border-color: rgba(192,221,151,0.5); }
@@ -303,6 +303,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 .qcard-q4 .qcard-kel-row { color: var(--q4-color); border-color: rgba(247,193,193,0.5); }
 .qcard-kel-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .qcard-kel-pus  { font-size: 9px; opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qcard-kel-jarak{ font-family: 'DM Mono', monospace; font-size: 9px; opacity: 0.85; text-align: right; white-space: nowrap; }
 .qcard-kel-val  { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700; text-align: right; }
 .qcard-empty    { font-size: 11px; opacity: 0.6; text-align: center; padding: 10px 0; font-style: italic; }
 
@@ -1295,11 +1296,12 @@ function updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pusF,
     const sorted=[...kels].sort((a,b)=>b.imun-a.imun);
     const kelRows=sorted.length===0
       ?`<div class="qcard-empty">Tidak Ada Kelurahan</div>`
-      :`<div class="qcard-kel-header"><span>Kelurahan</span><span>Puskesmas</span><span style="text-align:right">Imunisasi</span></div>
+      :`<div class="qcard-kel-header"><span>Kelurahan</span><span>Puskesmas</span><span style="text-align:right">Jarak PKM</span><span style="text-align:right">Imunisasi</span></div>
         <div class="qcard-kel-list">
           ${sorted.map(k=>`<div class="qcard-kel-row">
             <span class="qcard-kel-name">${k.name.charAt(0)+k.name.slice(1).toLowerCase()}</span>
             <span class="qcard-kel-pus">${k.pus}</span>
+            <span class="qcard-kel-jarak">${k.jarak.toFixed(2)} Km</span>
             <span class="qcard-kel-val">${k.imun.toLocaleString('id-ID')}</span>
           </div>`).join('')}
         </div>`;
