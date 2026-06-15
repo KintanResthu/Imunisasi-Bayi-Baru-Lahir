@@ -77,6 +77,8 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 #map { width: 100%; flex: 1; min-height: 600px; }
 
 .map-legend { position: absolute; bottom: 30px; right: 10px; background: rgba(255,255,255,0.96); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; z-index: 1000; pointer-events: none; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+.map-scroll-hint { position: absolute; bottom: 10px; left: 10px; background: rgba(30,41,59,0.72); color: #fff; font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 20px; z-index: 1000; pointer-events: none; opacity: 0.9; transition: opacity 0.2s; }
+.map-scroll-hint.hide { opacity: 0; }
 .map-legend h4 { font-size: 10px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
 .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 11px; font-weight: 500; }
 .legend-swatch { width: 14px; height: 10px; border-radius: 3px; flex-shrink: 0; }
@@ -380,6 +382,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
       <button class="map-mode-btn"        onclick="setMapMode('bayi',this)">Bayi Lahir</button>
     </div>
     <div class="map-legend" id="map-legend"></div>
+    <div class="map-scroll-hint" id="map-scroll-hint">Klik peta untuk zoom dengan scroll</div>
   </div>
 
   <div class="panel-right">
@@ -665,8 +668,13 @@ function getKelColor(pus,v) {
   return c.shades[Math.min(4,Math.floor(v*4.99))];
 }
 
-const leafMap = L.map('map').setView([-7.983,112.629],12);
+const leafMap = L.map('map', {scrollWheelZoom: false}).setView([-7.983,112.629],12);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy;OSM &copy;CARTO',maxZoom:19}).addTo(leafMap);
+// Aktifkan zoom-scroll hanya saat peta di-klik, matikan lagi saat kursor keluar dari peta,
+// agar scroll halaman tidak ikut memicu zoom peta (penyebab halaman terasa lag saat di-scroll).
+const mapScrollHint=document.getElementById('map-scroll-hint');
+leafMap.on('click',()=>{leafMap.scrollWheelZoom.enable();if(mapScrollHint)mapScrollHint.classList.add('hide');});
+leafMap.getContainer().addEventListener('mouseleave',()=>{leafMap.scrollWheelZoom.disable();if(mapScrollHint)mapScrollHint.classList.remove('hide');});
 let geoLayer, pusMarkers=[], labelLayers=[];
 
 function drawKelurahanLabels(activeKels) {
