@@ -36,7 +36,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); colo
 header {
   background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #7c3aed 100%);
   padding: 12px 20px; display: flex; align-items: center; gap: 14px;
-  position: sticky; top: 0; z-index: 2000;
+  position: relative; z-index: 2000;
   box-shadow: 0 2px 12px rgba(37,99,235,0.3);
 }
 .logo { width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); }
@@ -46,7 +46,7 @@ header p  { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
 .filterbar {
   background: var(--surface); border-bottom: 1px solid var(--border);
   padding: 7px 20px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-  position: sticky; top: 65px; z-index: 1500;
+  position: relative; z-index: 1500;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .fg { display: flex; align-items: center; gap: 6px; }
@@ -278,9 +278,9 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 .qcard-q3 .qcard-desc { color: var(--q3-color); border-color: var(--q3-border); }
 .qcard-q4 .qcard-desc { color: var(--q4-color); border-color: var(--q4-border); }
 .qcard-kel-header {
-  display: grid; grid-template-columns: 1fr 72px 56px 60px;
+  display: grid; grid-template-columns: 1fr 68px 60px 56px;
   font-size: 9px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.5px; opacity: 0.6; padding-bottom: 3px;
+  letter-spacing: 0.5px; opacity: 0.6; padding-bottom: 3px; white-space: nowrap;
 }
 .qcard-q1 .qcard-kel-header { color: var(--q1-color); }
 .qcard-q2 .qcard-kel-header { color: var(--q2-color); }
@@ -294,7 +294,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 .qcard-q3 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q3-border); }
 .qcard-q4 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q4-border); }
 .qcard-kel-row {
-  display: grid; grid-template-columns: 1fr 72px 56px 60px;
+  display: grid; grid-template-columns: 1fr 68px 60px 56px;
   font-size: 10px; padding: 2px 0; border-bottom: 1px solid; align-items: center; gap: 4px;
 }
 .qcard-q1 .qcard-kel-row { color: var(--q1-color); border-color: rgba(192,221,151,0.5); }
