@@ -1,0 +1,1416 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analisis Geospasial Imunisasi Kota Malang</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #f0f4fa;
+  --surface:   #ffffff;
+  --surface2:  #f8fafd;
+  --border:    #e2e8f0;
+  --border2:   #cbd5e1;
+  --text:      #1e293b;
+  --muted:     #64748b;
+  --muted2:    #94a3b8;
+  --accent:    #2563eb;
+  --accent2:   #7c3aed;
+  --green:     #16a34a;
+  --red:       #dc2626;
+  --yellow:    #ca8a04;
+  --q1-bg: #EAF3DE; --q1-border: #C0DD97; --q1-color: #27500A; --q1-accent: #3B6D11;
+  --q2-bg: #E6F1FB; --q2-border: #B5D4F4; --q2-color: #0C447C; --q2-accent: #185FA5;
+  --q3-bg: #FAEEDA; --q3-border: #FAC775; --q3-color: #633806; --q3-accent: #BA7517;
+  --q4-bg: #FCEBEB; --q4-border: #F7C1C1; --q4-color: #791F1F; --q4-accent: #A32D2D;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; min-height: 100vh; }
+
+header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #7c3aed 100%);
+  padding: 12px 20px; display: flex; align-items: center; gap: 14px;
+  position: relative; z-index: 2000;
+  box-shadow: 0 2px 12px rgba(37,99,235,0.3);
+}
+.logo { width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); }
+header h1 { font-size: 13px; font-weight: 700; color: #fff; line-height: 1.3; }
+header p  { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+
+.filterbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 7px 20px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  position: relative; z-index: 1500;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.fg { display: flex; align-items: center; gap: 6px; }
+.fg label { color: var(--muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.fsep { width: 1px; height: 22px; background: var(--border); }
+select { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-family: 'DM Mono', monospace; cursor: pointer; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+
+.kpi-strip { display: flex; gap: 0; background: var(--border); border-bottom: 2px solid var(--border); overflow: hidden; }
+.kpi { flex: 1; background: var(--surface); padding: 10px 16px; display: flex; flex-direction: column; gap: 3px; border-right: 1px solid var(--border); transition: background 0.15s; position: relative; overflow: hidden; }
+.kpi:last-child { border-right: none; }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--kpi-accent, var(--accent)); }
+.kpi:hover { background: #f8faff; }
+.kpi-icon  { font-size: 16px; position: absolute; right: 12px; top: 10px; opacity: 0.15; }
+.kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; font-weight: 700; }
+.kpi-value { font-size: 22px; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--kpi-accent, var(--accent)); line-height: 1.1; }
+.kpi-sub   { font-size: 10px; color: var(--muted2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-badge { display: inline-flex; align-items: center; gap: 3px; background: var(--kpi-bg, #eff6ff); color: var(--kpi-accent, var(--accent)); border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-top: 2px; width: fit-content; }
+.kpi:nth-child(1) { --kpi-accent: #2563eb; --kpi-bg: #eff6ff; }
+.kpi:nth-child(2) { --kpi-accent: #16a34a; --kpi-bg: #f0fdf4; }
+.kpi:nth-child(3) { --kpi-accent: #7c3aed; --kpi-bg: #f5f3ff; }
+.kpi:nth-child(4) { --kpi-accent: #0891b2; --kpi-bg: #ecfeff; }
+.kpi:nth-child(5) { --kpi-accent: #dc2626; --kpi-bg: #fef2f2; }
+
+.main { display: flex; gap: 6px; padding: 6px; background: var(--bg); align-items: stretch; }
+.panel-map { width: 55%; position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.07); flex-shrink: 0; display: flex; flex-direction: column; }
+.panel-right { flex: 1; background: var(--surface); display: flex; flex-direction: column; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.07); min-width: 0; }
+#map { width: 100%; flex: 1; min-height: 600px; }
+
+.map-legend { position: absolute; bottom: 30px; right: 10px; background: rgba(255,255,255,0.96); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; z-index: 1000; pointer-events: none; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+.map-scroll-hint { position: absolute; bottom: 10px; left: 10px; background: rgba(30,41,59,0.72); color: #fff; font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 20px; z-index: 1000; pointer-events: none; opacity: 0.9; transition: opacity 0.2s; }
+.map-scroll-hint.hide { opacity: 0; }
+.map-legend h4 { font-size: 10px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 11px; font-weight: 500; }
+.legend-swatch { width: 14px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.map-mode-toggle { position: absolute; top: 10px; right: 10px; z-index: 1000; display: flex; gap: 4px; }
+.map-mode-btn { background: rgba(255,255,255,0.95); border: 1px solid var(--border); color: var(--muted); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 700; transition: all 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.map-mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,0.35); }
+.map-mode-btn:hover:not(.active) { background: #f1f5f9; border-color: #94a3b8; }
+
+.right-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface2); border-radius: 10px 10px 0 0; overflow: hidden; }
+.rtab { flex: 1; padding: 10px 6px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.rtab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
+.rtab:hover:not(.active) { color: var(--text); background: var(--surface); }
+.right-content { position: relative; }
+.rcontent { display: none; flex-direction: column; }
+.rcontent.show { display: flex; }
+#chart-trend  { width: 100%; height: 520px; }
+#chart-compare { width: 100%; height: 520px; }
+
+.ynav-bar { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 6px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ynav-bar.hidden { display: none; }
+.ynav-btn { background: var(--surface); border: 1px solid var(--border2); color: var(--muted); width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0; line-height: 1; }
+.ynav-btn:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ynav-btn:disabled { opacity: 0.3; cursor: default; }
+.ynav-pills { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.ynav-pills::-webkit-scrollbar { display: none; }
+.ynav-pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; cursor: pointer; border: 1px solid var(--border2); background: var(--surface); color: var(--muted); white-space: nowrap; transition: all 0.12s; flex-shrink: 0; }
+.ynav-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 6px rgba(37,99,235,0.3); }
+.ynav-pill:hover:not(.active) { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+
+
+/* Custom trend legend */
+.trend-custom-legend {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tcl-pus-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 120px;
+}
+.tcl-pus-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding-bottom: 3px;
+  border-bottom: 2px solid;
+  margin-bottom: 2px;
+}
+.tcl-pus-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tcl-kel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tcl-kel-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.tcl-kel-line {
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.tcl-gender-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.tcl-gender-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.tcl-gender-line {
+  width: 24px;
+  height: 3px;
+  border-radius: 2px;
+}
+.tcl-penyakit-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.tcl-penyakit-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text);
+}
+.tcl-penyakit-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* SCATTER TAB */
+.scatter-ctrl-bar { display: flex; align-items: center; gap: 10px; padding: 7px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
+.scatter-ctrl-bar label { font-size: 11px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.scatter-ctrl-bar select { font-size: 11px; padding: 3px 7px; }
+.scatter-ctrl-bar .s-sep { width: 1px; height: 18px; background: var(--border); }
+
+.scatter-chart-area { position: relative; flex-shrink: 0; }
+#chart-scatter { width: 100%; height: 390px; }
+
+.scatter-bottom-bar {
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.scatter-info-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 6px 14px; align-items: center;
+}
+.info-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 2px 10px;
+  font-size: 11px; font-weight: 600; color: var(--text);
+  white-space: nowrap;
+}
+.info-pill .pill-label { color: var(--muted); font-weight: 500; font-size: 10px; margin-right: 1px; }
+.info-pill .pill-val   { color: var(--text); font-weight: 700; font-size: 11px; }
+.info-pill-r { border-color: #c7d2fe; background: #eef2ff; }
+.info-pill-r .pill-val { color: #4338ca; font-family: 'DM Mono', monospace; }
+.sleg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.sleg-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sleg-bubble-hint { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted2); margin-left: auto; }
+.sleg-b-sm { width:8px;  height:8px;  border-radius:50%; background:var(--muted2); opacity:0.5; }
+.sleg-b-md { width:14px; height:14px; border-radius:50%; background:var(--muted2); opacity:0.5; }
+.sleg-b-lg { width:20px; height:20px; border-radius:50%; background:var(--muted2); opacity:0.5; }
+.vsep-inline { width:1px; height:18px; background:var(--border); align-self:center; flex-shrink:0; }
+
+.stat-summary-box {
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  padding: 8px 14px; flex-shrink: 0;
+}
+.stat-summary-text { font-size: 12px; color: var(--text); line-height: 1.65; margin-bottom: 6px; }
+.stat-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.stat-chip  { padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+.chip-q1 { background: var(--q1-bg); color: var(--q1-color); border: 1px solid var(--q1-border); }
+.chip-q2 { background: var(--q2-bg); color: var(--q2-color); border: 1px solid var(--q2-border); }
+.chip-q3 { background: var(--q3-bg); color: var(--q3-color); border: 1px solid var(--q3-border); }
+.chip-q4 { background: var(--q4-bg); color: var(--q4-color); border: 1px solid var(--q4-border); }
+.chip-neutral { background: var(--surface); color: var(--muted); border: 1px solid var(--border2); }
+
+.quad-cards-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; padding: 8px 10px; flex-shrink: 0;
+}
+.qcard { border-radius: 8px; border: 1px solid; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.qcard-q1 { background: var(--q1-bg); border-color: var(--q1-border); }
+.qcard-q2 { background: var(--q2-bg); border-color: var(--q2-border); }
+.qcard-q3 { background: var(--q3-bg); border-color: var(--q3-border); }
+.qcard-q4 { background: var(--q4-bg); border-color: var(--q4-border); }
+.qcard-header { display: flex; align-items: flex-start; gap: 8px; }
+.qcard-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.qcard-title { font-size: 12px; font-weight: 700; line-height: 1.3; }
+.qcard-sub   { font-size: 10px; opacity: 0.75; margin-top: 1px; }
+.qcard-count { margin-left: auto; font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.qcard-q1 .qcard-title, .qcard-q1 .qcard-count { color: var(--q1-accent); }
+.qcard-q1 .qcard-sub { color: var(--q1-color); }
+.qcard-q2 .qcard-title, .qcard-q2 .qcard-count { color: var(--q2-accent); }
+.qcard-q2 .qcard-sub { color: var(--q2-color); }
+.qcard-q3 .qcard-title, .qcard-q3 .qcard-count { color: var(--q3-accent); }
+.qcard-q3 .qcard-sub { color: var(--q3-color); }
+.qcard-q4 .qcard-title, .qcard-q4 .qcard-count { color: var(--q4-accent); }
+.qcard-q4 .qcard-sub { color: var(--q4-color); }
+.qcard-desc { font-size: 10px; line-height: 1.55; padding-bottom: 6px; border-bottom: 1px solid; opacity: 0.8; }
+.qcard-q1 .qcard-desc { color: var(--q1-color); border-color: var(--q1-border); }
+.qcard-q2 .qcard-desc { color: var(--q2-color); border-color: var(--q2-border); }
+.qcard-q3 .qcard-desc { color: var(--q3-color); border-color: var(--q3-border); }
+.qcard-q4 .qcard-desc { color: var(--q4-color); border-color: var(--q4-border); }
+.qcard-kel-header {
+  display: grid; grid-template-columns: 1fr 68px 60px 56px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; opacity: 0.6; padding-bottom: 3px; white-space: nowrap;
+}
+.qcard-q1 .qcard-kel-header { color: var(--q1-color); }
+.qcard-q2 .qcard-kel-header { color: var(--q2-color); }
+.qcard-q3 .qcard-kel-header { color: var(--q3-color); }
+.qcard-q4 .qcard-kel-header { color: var(--q4-color); }
+.qcard-kel-list { display: flex; flex-direction: column; gap: 2px; max-height: 140px; overflow-y: auto; scrollbar-width: thin; }
+.qcard-kel-list::-webkit-scrollbar { width: 3px; }
+.qcard-kel-list::-webkit-scrollbar-thumb { border-radius: 2px; }
+.qcard-q1 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q1-border); }
+.qcard-q2 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q2-border); }
+.qcard-q3 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q3-border); }
+.qcard-q4 .qcard-kel-list::-webkit-scrollbar-thumb { background: var(--q4-border); }
+.qcard-kel-row {
+  display: grid; grid-template-columns: 1fr 68px 60px 56px;
+  font-size: 10px; padding: 2px 0; border-bottom: 1px solid; align-items: center; gap: 4px;
+}
+.qcard-q1 .qcard-kel-row { color: var(--q1-color); border-color: rgba(192,221,151,0.5); }
+.qcard-q2 .qcard-kel-row { color: var(--q2-color); border-color: rgba(181,212,244,0.5); }
+.qcard-q3 .qcard-kel-row { color: var(--q3-color); border-color: rgba(250,199,117,0.5); }
+.qcard-q4 .qcard-kel-row { color: var(--q4-color); border-color: rgba(247,193,193,0.5); }
+.qcard-kel-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.qcard-kel-pus  { font-size: 9px; opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qcard-kel-jarak{ font-family: 'DM Mono', monospace; font-size: 9px; opacity: 0.85; text-align: right; white-space: nowrap; }
+.qcard-kel-val  { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700; text-align: right; }
+.qcard-empty    { font-size: 11px; opacity: 0.6; text-align: center; padding: 10px 0; font-style: italic; }
+
+.no-data-overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(248,250,253,0.93); z-index: 10; gap: 10px; }
+.no-data-overlay.show { display: flex; }
+.no-data-icon  { font-size: 36px; opacity: 0.4; }
+.no-data-title { font-size: 14px; font-weight: 700; color: var(--muted); }
+.no-data-sub   { font-size: 11px; color: var(--muted2); text-align: center; max-width: 220px; line-height: 1.5; }
+
+.legend-pus { position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(255,255,255,0.96); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); pointer-events: none; max-height: 300px; overflow-y: auto; }
+.legend-pus h4 { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 5px; }
+.lpus-item { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 10px; font-weight: 600; color: var(--text); }
+.lpus-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-ghost { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 10px; color: var(--muted); }
+.legend-ghost-swatch { width: 10px; height: 10px; border-radius: 2px; border: 1px dashed var(--muted2); background: transparent; flex-shrink: 0; }
+
+.leaflet-tooltip { background: #fff !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; border-radius: 8px !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 12px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.12) !important; padding: 8px 12px !important; }
+.leaflet-tooltip.kel-label { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+.leaflet-control-attribution { font-size: 9px !important; background: rgba(255,255,255,0.7) !important; }
+.kel-label-inner { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 8px; font-weight: 700; color: rgba(30,41,59,0.6); text-shadow: 1px 1px 2px rgba(255,255,255,0.9), -1px -1px 2px rgba(255,255,255,0.9); text-align: center; letter-spacing: 0.3px; text-transform: uppercase; }
+.pus-popup { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; min-width: 200px; }
+.pus-popup strong { display: block; font-size: 13px; margin-bottom: 3px; font-weight: 700; }
+.pus-popup .pus-addr { color: #64748b; font-size: 11px; margin-bottom: 5px; }
+.pus-popup .pus-stat { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; background: #f8fafd; border-radius: 6px; padding: 6px; }
+.pus-popup .stat-item { text-align: center; flex: 1; }
+.pus-popup .stat-num  { font-size: 15px; font-weight: 700; font-family: 'DM Mono', monospace; }
+.pus-popup .stat-lbl  { font-size: 9px; color: #94a3b8; margin-top: 1px; }
+</style>
+</head>
+<body>
+<div id="loading-overlay" style="display:flex;position:fixed;inset:0;z-index:9999;background:rgba(240,244,250,0.97);flex-direction:column;align-items:center;justify-content:center;gap:16px;"><div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:15px;color:#1e293b;">Memuat Data Imunisasi...</div><div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#64748b;">Mohon tunggu sebentar</div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+
+<header>
+  <div class="logo">&#128137;</div>
+  <div>
+    <h1>Analisis Geospasial Perbandingan Jumlah Kelahiran Bayi dengan Imunisasi Bayi Baru Lahir Kota Malang</h1>
+    <p>2022&#8211;2025 &middot; 16 Puskesmas &middot; 57 Kelurahan &middot; Kota Malang, Jawa Timur</p>
+  </div>
+</header>
+
+<div class="filterbar">
+  <div class="fg"><label>Puskesmas</label><select id="puskesmas"></select></div>
+  <div class="fg"><label>Kelurahan</label><select id="kelurahan"></select></div>
+  <div class="fsep"></div>
+  <div class="fg"><label>Tahun</label><select id="tahun"></select></div>
+  <div class="fg"><label>Indikator</label><select id="indikator"></select></div>
+  <div class="fg"><label>Penyakit</label><select id="penyakit"></select></div>
+  <div class="fsep"></div>
+  <div class="fg">
+    <label>Mode Grafik</label>
+    <select id="mode_chart">
+      <option value="kelurahan">Per Kelurahan</option>
+      <option value="gender">Per Jenis Kelamin</option>
+      <option value="penyakit">Per Penyakit</option>
+    </select>
+  </div>
+</div>
+
+<div class="kpi-strip">
+  <div class="kpi"><span class="kpi-icon">&#128137;</span><span class="kpi-label">Total Imunisasi</span><span class="kpi-value" id="kpi-total-imun">&#8212;</span><span class="kpi-sub">dosis tercatat</span></div>
+  <div class="kpi"><span class="kpi-icon">&#128118;</span><span class="kpi-label">Total Bayi Lahir</span><span class="kpi-value" id="kpi-total-bayi">&#8212;</span><span class="kpi-sub">bayi tercatat</span></div>
+  <div class="kpi"><span class="kpi-icon">&#128205;</span><span class="kpi-label">Kelurahan Aktif</span><span class="kpi-value" id="kpi-kel-data">&#8212;</span><span class="kpi-sub" id="kpi-kel-data-sub">dari 57 kelurahan</span></div>
+  <div class="kpi"><span class="kpi-icon">&#127942;</span><span class="kpi-label">Imunisasi Tertinggi</span><span class="kpi-value" id="kpi-max-val">&#8212;</span><div class="kpi-badge" id="kpi-max-name">&#8212;</div></div>
+  <div class="kpi"><span class="kpi-icon">&#9888;&#65039;</span><span class="kpi-label">Imunisasi Terendah</span><span class="kpi-value" id="kpi-min-val">&#8212;</span><div class="kpi-badge" id="kpi-min-name">&#8212;</div></div>
+</div>
+
+<div class="main">
+  <div class="panel-map">
+    <div id="map"></div>
+    <div class="legend-pus" id="legend-pus"></div>
+    <div class="map-mode-toggle">
+      <button class="map-mode-btn active" onclick="setMapMode('imunisasi',this)">Imunisasi</button>
+      <button class="map-mode-btn"        onclick="setMapMode('bayi',this)">Bayi Lahir</button>
+    </div>
+    <div class="map-legend" id="map-legend"></div>
+    <div class="map-scroll-hint" id="map-scroll-hint">Klik peta untuk zoom dengan scroll</div>
+  </div>
+
+  <div class="panel-right">
+    <div class="right-tabs">
+      <div class="rtab active" onclick="switchRTab('trend',this)">Tren Bulanan</div>
+      <div class="rtab"        onclick="switchRTab('compare',this)">Perbandingan</div>
+      <div class="rtab"        onclick="switchRTab('scatter',this)">Korelasi Spasial</div>
+    </div>
+    <div class="right-content">
+
+      <!-- TAB TREN -->
+      <div class="rcontent show" id="rc-trend">
+        <div id="trend-ynav" class="ynav-bar">
+          <button class="ynav-btn" id="trend-prev" onclick="ynavStep('trend',-1)">&#8249;</button>
+          <div class="ynav-pills" id="trend-pills"></div>
+          <button class="ynav-btn" id="trend-next" onclick="ynavStep('trend',1)">&#8250;</button>
+        </div>
+        <div id="chart-trend"></div>
+        <div id="trend-custom-legend" class="trend-custom-legend"></div>
+      </div>
+
+      <!-- TAB PERBANDINGAN -->
+      <div class="rcontent" id="rc-compare">
+        <div id="compare-ynav" class="ynav-bar">
+          <button class="ynav-btn" id="compare-prev" onclick="ynavStep('compare',-1)">&#8249;</button>
+          <div class="ynav-pills" id="compare-pills"></div>
+          <button class="ynav-btn" id="compare-next" onclick="ynavStep('compare',1)">&#8250;</button>
+        </div>
+        <div id="chart-compare"></div>
+      </div>
+
+      <!-- TAB KORELASI SPASIAL -->
+      <div class="rcontent" id="rc-scatter">
+        <div class="scatter-ctrl-bar">
+          <label>Bulan:</label>
+          <select id="scatter_bulan">
+            <option value="all">Semua Bulan</option>
+            <option value="jan">Januari</option><option value="feb">Februari</option>
+            <option value="mar">Maret</option><option value="apr">April</option>
+            <option value="mei">Mei</option><option value="jun">Juni</option>
+            <option value="jul">Juli</option><option value="agu">Agustus</option>
+            <option value="sep">September</option><option value="okt">Oktober</option>
+            <option value="nov">November</option><option value="des">Desember</option>
+          </select>
+          <div class="s-sep"></div>
+          <label>Garis Kuadran:</label>
+          <select id="scatter_quadrant">
+            <option value="show">Tampilkan</option>
+            <option value="hide">Sembunyikan</option>
+          </select>
+          <div class="s-sep"></div>
+          <label>Nama:</label>
+          <select id="scatter_labels">
+            <option value="hover">Saat Hover</option>
+            <option value="show">Selalu Tampil</option>
+          </select>
+        </div>
+
+        <div id="scatter-ynav" class="ynav-bar">
+          <button class="ynav-btn" id="scatter-prev" onclick="ynavStep('scatter',-1)">&#8249;</button>
+          <div class="ynav-pills" id="scatter-pills"></div>
+          <button class="ynav-btn" id="scatter-next" onclick="ynavStep('scatter',1)">&#8250;</button>
+        </div>
+
+        <div class="scatter-chart-area">
+          <div id="chart-scatter"></div>
+          <div class="no-data-overlay" id="scatter-nodata">
+            <div class="no-data-icon">&#128202;</div>
+            <div class="no-data-title">Tidak Ada Data</div>
+            <div class="no-data-sub">Ubah filter untuk melihat analisis.</div>
+          </div>
+        </div>
+
+        <!-- INFO + LEGEND GABUNG SATU BARIS -->
+        <div class="scatter-bottom-bar">
+          <div class="scatter-info-row">
+            <div class="info-pill"><span class="pill-label">X:</span><span class="pill-val">Jarak Ke Puskesmas (Km)</span></div>
+            <div class="info-pill"><span class="pill-label">Y:</span><span class="pill-val">Total Imunisasi</span></div>
+            <div class="info-pill info-pill-r"><span class="pill-label">r (Pearson):</span><span class="pill-val" id="r-value-display">&#8212;</span></div>
+            <div class="vsep-inline"></div>
+            <div class="sleg-item"><div class="sleg-dot" style="background:#639922;border:1.5px solid #3B6D11;"></div>Q1: Dekat &amp; Tinggi</div>
+            <div class="sleg-item"><div class="sleg-dot" style="background:#378ADD;border:1.5px solid #185FA5;"></div>Q2: Jauh &amp; Tinggi</div>
+            <div class="sleg-item"><div class="sleg-dot" style="background:#EF9F27;border:1.5px solid #BA7517;"></div>Q3: Dekat &amp; Rendah</div>
+            <div class="sleg-item"><div class="sleg-dot" style="background:#E24B4A;border:1.5px solid #A32D2D;"></div>Q4: Jauh &amp; Rendah</div>
+            <div class="sleg-bubble-hint">
+              <div class="sleg-b-sm"></div><div class="sleg-b-md"></div><div class="sleg-b-lg"></div>
+              <span>Bubble = Bayi Lahir</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ringkasan statistik -->
+        <div class="stat-summary-box">
+          <div class="stat-summary-text" id="stat-summary-text">Memuat analisis...</div>
+          <div class="stat-chips" id="stat-chips"></div>
+        </div>
+
+        <!-- Kartu kuadran 2x2 -->
+        <div class="quad-cards-grid" id="quad-cards-grid"></div>
+
+      </div><!-- /rc-scatter -->
+    </div>
+  </div>
+</div>
+
+<script>
+// Data variables — loaded from data_encoded.v2.json.gz
+let data = [];
+let dataBayi = [];
+let dataCoverage = [];
+let geo = null;
+
+const mapPus       = {"Arjuno": ["KAUMAN", "KIDULDALEM", "ORO ORODOWO", "PENAGGUNGAN"], "Arjowinangun": ["ARJOWINANGUN", "BUMIAYU", "MERGOSONO", "TLOGOWARU"], "Bareng": ["KASIN", "BARENG", "GADINGKASRI", "SUKOHARJO"], "Ciptomulyo": ["CIPTOMULYO", "GADANG", "KEBONSARI", "BAKALANKRAJAN"], "Cisadea": ["PURWANTORO", "BLIMBING"], "Dinoyo": ["KETAWANGGEDE", "DINOYO", "TLOGOMAS", "SUMBERSARI", "MERJOSARI"], "Gribig": ["MADYOPURO", "LESANPURO", "SAWOJAJAR", "CEMOROKANDANG"], "Janti": ["BANDUNGREJOSARI", "TANJUNGREJO", "SUKUN"], "Kedungkandang": ["KOTALAMA", "KEDUNGKANDANG", "BURING", "WONOKOYO"], "Kendalkerep": ["JODIPAN", "KESATRIAN", "BUNULREJO", "POLEHAN"], "Kendalsari": ["LOWOKWARU", "TULUSREJO", "JATIMULYO"], "Mojolangu": ["MOJOLANGU", "TUNJUNGSEKAR", "TASIKMADU", "TUNGGULWULUNG"], "Mulyorejo": ["BANDULAN", "PISANGCANDI", "KARANGBESUKI", "MULYOREJO"], "Pandanwangi": ["ARJOSARI", "PANDANWANGI"], "Rampal Celaket": ["RAMPALCELAKET", "SAMAAN", "KLOJEN"], "Polowijen": ["POLOWIJEN", "BALEARJOSARI", "PURWODADI"]};
+
+async function loadAllData() {
+  const loadingEl = document.getElementById('loading-overlay');
+  try {
+    if (loadingEl) loadingEl.style.display = 'flex';
+    // Fetch compressed JSON and decompress in browser
+    const resp = await fetch('data_encoded.v2.json.gz');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const ds = new DecompressionStream('gzip');
+    const decompressed = resp.body.pipeThrough(ds);
+    const reader = decompressed.getReader();
+    const chunks = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const merged = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+    const json = JSON.parse(new TextDecoder().decode(merged));
+    data = json.data;
+    geo = json.geo;
+    dataBayi = json.dataBayi;
+    dataCoverage = json.dataCoverage;
+    if (loadingEl) loadingEl.style.display = 'none';
+    fill('puskesmas', Object.keys(mapPus));
+    updateKelurahan();
+    update();
+  } catch(err) {
+    console.error('Gagal load data:', err);
+    if (loadingEl) loadingEl.innerHTML = '<div style="text-align:center;color:#dc2626;padding:30px"><div style="font-size:36px">&#9888;</div><div style="font-size:16px;font-weight:700;margin:10px 0">Gagal Memuat Data</div><div style="font-size:12px;color:#64748b">Pastikan file data_encoded.v2.json.gz tersedia.<br>Error: ' + err.message + '</div></div>';
+  }
+}
+
+
+const pusCoords    = {"Arjuno": {"lat": -7.978120392162796, "lon": 112.62663570822933, "alamat": "Jl. Simpang Arjuno, Klojen"}, "Arjowinangun": {"lat": -8.03860652518724, "lon": 112.64195578793837, "alamat": "Jl. Raya Arjowinangun, Kedungkandang"}, "Bareng": {"lat": -7.978225875330318, "lon": 112.62289128161116, "alamat": "Jl. Bareng Tenes 4A, Klojen"}, "Ciptomulyo": {"lat": -8.001750829711767, "lon": 112.62992034907381, "alamat": "Jl. Kolonel Sugiono VIII, Sukun"}, "Cisadea": {"lat": -7.956917712420469, "lon": 112.64128759132338, "alamat": "Jl. Indragiri IV No.43, Purwantoro, Kec. Blimbing"}, "Dinoyo": {"lat": -7.942735426841242, "lon": 112.61199689818136, "alamat": "Jl. Mayjend Mt Haryono 9 No.13, Dinoyo, Kec. Lowokwaru"}, "Gribig": {"lat": -7.979750878658932, "lon": 112.66521310666981, "alamat": "Jl. Ki Ageng Gribig No.97, Madyopuro, Kec. Kedungkandang"}, "Janti": {"lat": -8.000447403883676, "lon": 112.62072059873104, "alamat": "Jl. Janti Bar. No.86, Sukun, Kec. Sukun"}, "Kedungkandang": {"lat": -7.993023843252479, "lon": 112.64827318531928, "alamat": "Jl. Ki Ageng Gribig No.142, Kedungkandang"}, "Kendalkerep": {"lat": -7.961125245671639, "lon": 112.65084753558213, "alamat": "Jl. Sulfat No.100, Bunulrejo, Kec. Blimbing"}, "Kendalsari": {"lat": -7.945180290417161, "lon": 112.63106793735061, "alamat": "Jl. Cengger Ayam I No.8, Tulusrejo, Kec. Lowokwaru"}, "Mojolangu": {"lat": -7.93791772848433, "lon": 112.63238969961951, "alamat": "Jl. Sudimoro, Lowokwaru"}, "Mulyorejo": {"lat": -7.987746365999383, "lon": 112.5978798392867, "alamat": "Jl. Budi Utomo, Sukun"}, "Pandanwangi": {"lat": -7.946575615935313, "lon": 112.65497595411426, "alamat": "Jl. Laksda Adi Sucipto, Blimbing"}, "Polowijen": {"lat": -7.931485297530887, "lon": 112.65013489220874, "alamat": "Jl. Raden Panji Suroso, Blimbing"}, "Rampal Celaket": {"lat": -7.964172042252737, "lon": 112.63164954907487, "alamat": "Jl. Rampal Celaket, Klojen"}};
+const dataImunPus  = [];
+const centroidData = [{"NAMOBJ": "TLOGOWARU", "lat_kel": -8.037912509691095, "lon_kel": 112.65769751362188}, {"NAMOBJ": "BUMIAYU", "lat_kel": -8.018479307564393, "lon_kel": 112.63711282568497}, {"NAMOBJ": "ARJOWINANGUN", "lat_kel": -8.039223285206706, "lon_kel": 112.63860774280994}, {"NAMOBJ": "WONOKOYO", "lat_kel": -8.023833203792146, "lon_kel": 112.6548362663427}, {"NAMOBJ": "TUNGGULWULUNG", "lat_kel": -7.926422257904873, "lon_kel": 112.61409291195642}, {"NAMOBJ": "TLOGOMAS", "lat_kel": -7.93350029422118, "lon_kel": 112.59967254801174}, {"NAMOBJ": "KARANGBESUKI", "lat_kel": -7.956343904161673, "lon_kel": 112.60245744349133}, {"NAMOBJ": "SUMBERSARI", "lat_kel": -7.9599325664128235, "lon_kel": 112.6144564482375}, {"NAMOBJ": "TANJUNGREJO", "lat_kel": -7.989025619526033, "lon_kel": 112.61401093284114}, {"NAMOBJ": "BANDULAN", "lat_kel": -7.9838052355734, "lon_kel": 112.60456890473745}, {"NAMOBJ": "MULYOREJO", "lat_kel": -7.9887355371901565, "lon_kel": 112.59584874995862}, {"NAMOBJ": "MERJOSARI", "lat_kel": -7.943065854774759, "lon_kel": 112.59130872874707}, {"NAMOBJ": "DINOYO", "lat_kel": -7.939978201447269, "lon_kel": 112.60903894293324}, {"NAMOBJ": "KETAWANGGEDE", "lat_kel": -7.950123129472436, "lon_kel": 112.61208906137475}, {"NAMOBJ": "PISANGCANDI", "lat_kel": -7.9713653301239304, "lon_kel": 112.6064880325327}, {"NAMOBJ": "GADINGKASRI", "lat_kel": -7.970537560672034, "lon_kel": 112.61704969646468}, {"NAMOBJ": "BALEARJOSARI", "lat_kel": -7.922532501358682, "lon_kel": 112.64838998851891}, {"NAMOBJ": "JODIPAN", "lat_kel": -7.988364885976175, "lon_kel": 112.64088381427116}, {"NAMOBJ": "KIDULDALEM", "lat_kel": -7.980734358717935, "lon_kel": 112.6343213276001}, {"NAMOBJ": "BUNULREJO", "lat_kel": -7.9670110332467745, "lon_kel": 112.6460695891646}, {"NAMOBJ": "SAWOJAJAR", "lat_kel": -7.974382155031709, "lon_kel": 112.65702587523987}, {"NAMOBJ": "KESATRIAN", "lat_kel": -7.976930746859421, "lon_kel": 112.64258678055965}, {"NAMOBJ": "KLOJEN", "lat_kel": -7.973352731560151, "lon_kel": 112.6346684850084}, {"NAMOBJ": "SUKOHARJO", "lat_kel": -7.9878393880574645, "lon_kel": 112.63304351866171}, {"NAMOBJ": "PANDANWANGI", "lat_kel": -7.951792480166977, "lon_kel": 112.65835566069997}, {"NAMOBJ": "ARJOSARI", "lat_kel": -7.931488042247595, "lon_kel": 112.65669993596592}, {"NAMOBJ": "PURWODADI", "lat_kel": -7.937910365608671, "lon_kel": 112.64859465533732}, {"NAMOBJ": "BLIMBING", "lat_kel": -7.944916241305715, "lon_kel": 112.64600558170847}, {"NAMOBJ": "PURWANTORO", "lat_kel": -7.954384637347781, "lon_kel": 112.64448046377453}, {"NAMOBJ": "KOTALAMA", "lat_kel": -7.993075233015464, "lon_kel": 112.6391192474061}, {"NAMOBJ": "POLEHAN", "lat_kel": -7.983598291045751, "lon_kel": 112.64656918485343}, {"NAMOBJ": "POLOWIJEN", "lat_kel": -7.929746923909036, "lon_kel": 112.6469906747995}, {"NAMOBJ": "RAMPALCELAKET", "lat_kel": -7.9651407233091005, "lon_kel": 112.63575544451095}, {"NAMOBJ": "GADANG", "lat_kel": -8.016081646495294, "lon_kel": 112.62814884747281}, {"NAMOBJ": "KEBONSARI", "lat_kel": -8.022622623379025, "lon_kel": 112.62224540566453}, {"NAMOBJ": "BAKALANKRAJAN", "lat_kel": -8.005861156451479, "lon_kel": 112.60603742754266}, {"NAMOBJ": "BANDUNGREJOSARI", "lat_kel": -8.004305792564052, "lon_kel": 112.6170683274156}, {"NAMOBJ": "SUKUN", "lat_kel": -7.992944753503513, "lon_kel": 112.61998821575624}, {"NAMOBJ": "KASIN", "lat_kel": -7.991526142125897, "lon_kel": 112.62589362748228}, {"NAMOBJ": "CIPTOMULYO", "lat_kel": -7.998354152363003, "lon_kel": 112.62941618862308}, {"NAMOBJ": "MERGOSONO", "lat_kel": -7.999645747215202, "lon_kel": 112.63431737444898}, {"NAMOBJ": "BURING", "lat_kel": -8.008547907750799, "lon_kel": 112.6550961995427}, {"NAMOBJ": "KEDUNGKANDANG", "lat_kel": -7.997046241309465, "lon_kel": 112.65705892697801}, {"NAMOBJ": "LESANPURO", "lat_kel": -7.991880592452515, "lon_kel": 112.66355424049266}, {"NAMOBJ": "MADYOPURO", "lat_kel": -7.986145566263905, "lon_kel": 112.67089340227876}, {"NAMOBJ": "CEMOROKANDANG", "lat_kel": -7.988746036129299, "lon_kel": 112.68298175827812}, {"NAMOBJ": "BARENG", "lat_kel": -7.978975483843648, "lon_kel": 112.61814784636813}, {"NAMOBJ": "KAUMAN", "lat_kel": -7.979653749207805, "lon_kel": 112.62725011410828}, {"NAMOBJ": "ORO ORODOWO", "lat_kel": -7.969121804275453, "lon_kel": 112.62530799229329}, {"NAMOBJ": "SAMAAN", "lat_kel": -7.964587943785942, "lon_kel": 112.62960207078913}, {"NAMOBJ": "PENAGGUNGAN", "lat_kel": -7.957101432736738, "lon_kel": 112.62088991689572}, {"NAMOBJ": "LOWOKWARU", "lat_kel": -7.956504737789023, "lon_kel": 112.63093383666526}, {"NAMOBJ": "JATIMULYO", "lat_kel": -7.942668428976963, "lon_kel": 112.61793720902402}, {"NAMOBJ": "TULUSREJO", "lat_kel": -7.945999217758278, "lon_kel": 112.63023537712506}, {"NAMOBJ": "MOJOLANGU", "lat_kel": -7.936584367175592, "lon_kel": 112.62815425165404}, {"NAMOBJ": "TUNJUNGSEKAR", "lat_kel": -7.929557729001204, "lon_kel": 112.63414733103366}, {"NAMOBJ": "TASIKMADU", "lat_kel": -7.919536986617155, "lon_kel": 112.6272933214423}];
+
+const PUS_COLORS = {
+  "Arjuno":         { base:"#2563eb", shades:["#dbeafe","#93c5fd","#3b82f6","#1d4ed8","#1e3a8a"] },
+  "Arjowinangun":   { base:"#16a34a", shades:["#dcfce7","#86efac","#4ade80","#16a34a","#14532d"] },
+  "Bareng":         { base:"#dc2626", shades:["#fee2e2","#fca5a5","#f87171","#dc2626","#7f1d1d"] },
+  "Ciptomulyo":     { base:"#d97706", shades:["#fef3c7","#fcd34d","#fbbf24","#d97706","#78350f"] },
+  "Cisadea":        { base:"#0f766e", shades:["#ccfbf1","#99f6e4","#2dd4bf","#0f766e","#134e4a"] },
+  "Dinoyo":         { base:"#7c3aed", shades:["#ede9fe","#c4b5fd","#a78bfa","#7c3aed","#3b0764"] },
+  "Gribig":         { base:"#b45309", shades:["#fef9c3","#fde047","#facc15","#b45309","#713f12"] },
+  "Janti":          { base:"#0891b2", shades:["#cffafe","#67e8f9","#22d3ee","#0891b2","#164e63"] },
+  "Kedungkandang":  { base:"#9333ea", shades:["#f3e8ff","#d8b4fe","#c084fc","#9333ea","#581c87"] },
+  "Kendalkerep":    { base:"#0369a1", shades:["#e0f2fe","#7dd3fc","#38bdf8","#0369a1","#0c4a6e"] },
+  "Kendalsari":     { base:"#15803d", shades:["#dcfce7","#6ee7b7","#34d399","#15803d","#14532d"] },
+  "Mojolangu":      { base:"#db2777", shades:["#fce7f3","#f9a8d4","#f472b6","#db2777","#831843"] },
+  "Mulyorejo":      { base:"#65a30d", shades:["#f7fee7","#bef264","#84cc16","#65a30d","#1a2e05"] },
+  "Pandanwangi":    { base:"#ea580c", shades:["#ffedd5","#fdba74","#fb923c","#ea580c","#7c2d12"] },
+  "Polowijen":      { base:"#be185d", shades:["#fdf2f8","#fbcfe8","#f9a8d4","#be185d","#831843"] },
+  "Rampal Celaket": { base:"#475569", shades:["#f1f5f9","#cbd5e1","#94a3b8","#475569","#1e293b"] },
+};
+
+const QUAD_META = [
+  { 
+    key: "Q1",
+    label: "Q1 - Ideal",
+    sub: "Jarak dekat dan imunisasi tinggi",
+    icon: "&#10003;",
+    cls: "qcard-q1",
+    chipCls: "chip-q1",
+    fillColor: "rgba(99,153,34,0.07)",
+    borderColor: "#3B6D11",
+    markerFill: "rgba(99,153,34,0.80)",
+    markerBorder: "#3B6D11",
+    desc: "Wilayah dengan jarak dekat ke fasilitas kesehatan dan tingkat imunisasi tinggi. Menunjukkan kondisi pelayanan dan partisipasi masyarakat yang optimal sehingga dapat dijadikan wilayah acuan."
+  },
+
+  { 
+    key: "Q2",
+    label: "Q2 - Resilien",
+    sub: "Jarak jauh tetapi imunisasi tinggi",
+    icon: "&#128170;",
+    cls: "qcard-q2",
+    chipCls: "chip-q2",
+    fillColor: "rgba(55,138,221,0.07)",
+    borderColor: "#185FA5",
+    markerFill: "rgba(55,138,221,0.80)",
+    markerBorder: "#185FA5",
+    desc: "Meskipun berjarak jauh dari fasilitas kesehatan, tingkat imunisasi tetap tinggi. Hal ini mengindikasikan adanya faktor pendukung lain seperti klinik, rumah sakit, atau kesadaran masyarakat yang baik."
+  },
+
+  { 
+    key: "Q3",
+    label: "Q3 - Investigasi",
+    sub: "Jarak dekat tetapi imunisasi rendah",
+    icon: "&#128269;",
+    cls: "qcard-q3",
+    chipCls: "chip-q3",
+    fillColor: "rgba(239,159,39,0.07)",
+    borderColor: "#BA7517",
+    markerFill: "rgba(239,159,39,0.80)",
+    markerBorder: "#BA7517",
+    desc: "Wilayah dengan akses dekat ke fasilitas kesehatan namun tingkat imunisasi masih rendah. Kondisi ini menunjukkan adanya hambatan non-geografis seperti kesadaran masyarakat, jadwal pelayanan, atau kendala pendataan."
+  },
+
+  { 
+    key: "Q4",
+    label: "Q4 - Prioritas",
+    sub: "Jarak jauh dan imunisasi rendah",
+    icon: "&#128680;",
+    cls: "qcard-q4",
+    chipCls: "chip-q4",
+    fillColor: "rgba(226,75,74,0.09)",
+    borderColor: "#A32D2D",
+    markerFill: "rgba(226,75,74,0.80)",
+    markerBorder: "#A32D2D",
+    desc: "Wilayah dengan risiko tertinggi karena jarak jauh ke fasilitas kesehatan dan tingkat imunisasi rendah. Memerlukan intervensi khusus seperti peningkatan akses layanan atau posyandu keliling."
+  }
+];
+
+let selectedKel = "all";
+let mapMode     = "imunisasi";
+const ynavState = { trend:{years:[],idx:0}, compare:{years:[],idx:0}, scatter:{years:[],idx:0} };
+
+const centroidMap = {};
+centroidData.forEach(d => { centroidMap[d.NAMOBJ] = { lat:d.lat_kel, lon:d.lon_kel }; });
+
+const kel_to_pus_js = {};
+for (const [pus,kels] of Object.entries(mapPus)) kels.forEach(k => kel_to_pus_js[k] = pus);
+
+const indikator_alias_map = {
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan HB":"HB / Hepatitis B",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan JE":"Japanese Encephalitis (JE)",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan JAPANESE ENCEPHALITIS (JE)":"Japanese Encephalitis (JE)",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan BCG":"BCG",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan Polio":"Polio",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan Rotavirus":"Rotavirus",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan Campak":"Campak Rubella (MR)",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan DPT":"DPT / Hib",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan PNEUMOKOKUS":"PCV / Pneumokokus",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan PCV":"PCV / Pneumokokus",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan IPV":"IPV",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan OPV":"OPV",
+  "Jumlah Imunisasi Bayi Baru Lahir Berdasarkan PENTA":"PENTA"
+};
+const indikator_map = {
+  "HB / Hepatitis B":["HB0 / Hepatitis B","HB0 / Hepatitis B (<24 Jam)","HB0 / Hepatitis B (1-7 hari)"],
+  "Polio":["Polio 1","Polio 2","Polio 3","Polio 4"],
+  "Rotavirus":["ROTAVIRUS (1)","ROTAVIRUS (2)","ROTAVIRUS (3)"],
+  "DPT / Hib":["DPT/HB-Hib (1)","DPT/HB-Hib (2)","DPT/HB-Hib (3)","DPT/HB-Hib (4) Booster"],
+  "PCV / Pneumokokus":["PCV1","PCV2","PCV3","PNEUMOKOKUS (1)","PNEUMOKOKUS (2)","PNEUMOKOKUS (3)"],
+  "Campak Rubella (MR)":["CAMPAK RUBELLA (MR)","CAMPAK RUBELLA (MR) 2"],
+  "IPV":["IPV","IPV 1","IPV 2","IPV 3"],
+  "OPV":["OPV1","OPV2","OPV3","OPV4"],
+  "PENTA":["PENTA1","PENTA2","PENTA3"],
+  "BCG":["BCG"],
+  "Japanese Encephalitis (JE)":["JAPANESE ENCEPHALITIS (JE)"]
+};
+
+function genderLabel(g) {
+  if (g === "laki-laki") return "Laki-Laki";
+  if (g === "perempuan") return "Perempuan";
+  if (g === "total") return "Total";
+  return g.split(' ').map(w=>w?w[0].toUpperCase()+w.slice(1):w).join(' ');
+}
+
+// =========================================
+// MAP
+// =========================================
+function getKelColor(pus,v) {
+  const c=PUS_COLORS[pus]; if(!c)return"#e2e8f0";
+  return c.shades[Math.min(4,Math.floor(v*4.99))];
+}
+
+const leafMap = L.map('map', {scrollWheelZoom: false}).setView([-7.983,112.629],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy;OSM &copy;CARTO',maxZoom:19}).addTo(leafMap);
+// Aktifkan zoom-scroll hanya saat peta di-klik, matikan lagi saat kursor keluar dari peta,
+// agar scroll halaman tidak ikut memicu zoom peta (penyebab halaman terasa lag saat di-scroll).
+const mapScrollHint=document.getElementById('map-scroll-hint');
+leafMap.on('click',()=>{leafMap.scrollWheelZoom.enable();if(mapScrollHint)mapScrollHint.classList.add('hide');});
+leafMap.getContainer().addEventListener('mouseleave',()=>{leafMap.scrollWheelZoom.disable();if(mapScrollHint)mapScrollHint.classList.remove('hide');});
+let geoLayer, pusMarkers=[], labelLayers=[];
+
+function drawKelurahanLabels(activeKels) {
+  labelLayers.forEach(l=>leafMap.removeLayer(l)); labelLayers=[];
+  const zoom=leafMap.getZoom(); if(zoom<13)return;
+  centroidData.forEach(d=>{
+    const isActive=activeKels.has(d.NAMOBJ);
+    if(!isActive&&zoom<14)return;
+    const dn=d.NAMOBJ.split(' ').map(w=>w?w[0]+w.slice(1).toLowerCase():'').join(' ');
+    const tt=L.tooltip({permanent:true,direction:'center',className:'kel-label',interactive:false,opacity:isActive?0.85:0.35})
+      .setContent(`<div class="kel-label-inner">${dn}</div>`).setLatLng([d.lat_kel,d.lon_kel]);
+    tt.addTo(leafMap); labelLayers.push(tt);
+  });
+}
+leafMap.on('zoomend',()=>{
+  const sp=document.getElementById("puskesmas").value;
+  const ak=sp==="all"?new Set(Object.keys(kel_to_pus_js)):new Set(mapPus[sp]||[]);
+  drawKelurahanLabels(ak);
+});
+
+function drawPusLegend(ap){
+  const el=document.getElementById('legend-pus');
+  const entries=ap==='all'?Object.keys(PUS_COLORS):[ap];
+  el.innerHTML='<h4>Puskesmas</h4>'+
+    entries.map(p=>{const c=PUS_COLORS[p]||{base:'#888'};return`<div class="lpus-item"><div class="lpus-dot" style="background:${c.base}"></div>${p}</div>`;}).join('')+
+    `<div class="legend-ghost"><div class="legend-ghost-swatch"></div><span>Tidak ada data</span></div>`;
+}
+
+function drawMap(filtered){
+  if(geoLayer)leafMap.removeLayer(geoLayer);
+  const tahun=document.getElementById("tahun").value;
+  const selPus=document.getElementById("puskesmas").value;
+  const totals={};
+  filtered.filter(d=>d.gender==="total").forEach(d=>{totals[d.kelurahan_shp]=(totals[d.kelurahan_shp]||0)+(d.jumlah||0);});
+  const bayiMap={};
+  dataBayi.filter(d=>(tahun==="all"||String(d.tahun)===tahun)&&d.gender==="total")
+    .forEach(d=>{bayiMap[d.kelurahan_shp]=(bayiMap[d.kelurahan_shp]||0)+(d.jumlah||0);});
+  const pusMaxVals={},pusBayiMax={};
+  for(const[kel,val]of Object.entries(totals)){const p=kel_to_pus_js[kel];if(!p)continue;if(!pusMaxVals[p]||val>pusMaxVals[p])pusMaxVals[p]=val;}
+  for(const[kel,val]of Object.entries(bayiMap)){const p=kel_to_pus_js[kel];if(!p)continue;if(!pusBayiMax[p]||val>pusBayiMax[p])pusBayiMax[p]=val;}
+  const activeKels=selPus==="all"?new Set(Object.keys(kel_to_pus_js)):new Set(mapPus[selPus]||[]);
+  geoLayer=L.geoJSON(geo,{
+    style:function(f){
+      const nm=f.properties.NAMOBJ,pus=kel_to_pus_js[nm];
+      if(!pus)return{fillColor:"#e2e8f0",weight:0.4,color:"#cbd5e1",fillOpacity:0.25};
+      const c=PUS_COLORS[pus],isA=activeKels.has(nm);
+      if(!isA)return{fillColor:c?c.shades[0]:"#e2e8f0",weight:0.5,color:c?c.shades[1]:"#cbd5e1",fillOpacity:0.30};
+      let val=0,mx=1;
+      if(mapMode==='bayi'){val=bayiMap[nm]||0;mx=pusBayiMax[pus]||1;}
+      else{val=totals[nm]||0;mx=pusMaxVals[pus]||1;}
+      const norm=mx>0?val/mx:0,color=getKelColor(pus,norm),isSel=selectedKel===nm;
+      return{fillColor:color,weight:isSel?3:1,color:isSel?'#1e293b':'rgba(100,116,139,0.5)',fillOpacity:0.82};
+    },
+    onEachFeature:function(f,layer){
+      const nm=f.properties.NAMOBJ,imun=totals[nm]||0,bayi=bayiMap[nm]||0;
+      const pus=kel_to_pus_js[nm]||'&mdash;',pCol=PUS_COLORS[pus]?PUS_COLORS[pus].base:'#888';
+      const isA=activeKels.has(nm);
+      const badge=isA?`<span style="color:#16a34a;font-weight:700">&#9679; Aktif</span>`:`<span style="color:#94a3b8">&#9675; Tidak ada data</span>`;
+      layer.bindTooltip(
+        `<b>${nm}</b><br><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${pCol};margin-right:4px;vertical-align:middle"></span>Puskesmas: <b>${pus}</b><br>${badge}<br>Total Imunisasi: <b>${imun.toLocaleString('id-ID')}</b><br>Bayi Lahir: <b>${bayi.toLocaleString('id-ID')}</b>`,
+        {sticky:true}
+      );
+      layer.on("click",function(){
+        selectedKel=nm;
+        const sel=document.getElementById("kelurahan");
+        if([...sel.options].some(o=>o.value===nm))sel.value=nm;
+        else{sel.value="all";selectedKel="all";}
+        update();
+      });
+    }
+  }).addTo(leafMap);
+  drawPusLegend(selPus); updateMapLegend(selPus); drawPuskesmasMarkers(filtered); drawKelurahanLabels(activeKels);
+}
+
+function updateMapLegend(sp){
+  const el=document.getElementById('map-legend');
+  if(sp!=='all'){
+    const c=PUS_COLORS[sp]; if(!c){el.innerHTML='';return;}
+    const ml=mapMode==='bayi'?'Bayi Lahir':'Total Imunisasi';
+    el.innerHTML=`<h4>${ml} (${sp})</h4>`+
+      ['Sangat Sedikit','Sedikit','Sedang','Banyak','Sangat Banyak'].map((lbl,i)=>
+        `<div class="legend-item"><div class="legend-swatch" style="background:${c.shades[i]}"></div><span>${lbl}</span></div>`
+      ).join('')+
+      `<div class="legend-item" style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0"><div class="legend-swatch" style="background:${c.shades[0]};opacity:0.4;border:1px dashed ${c.shades[1]}"></div><span style="color:#94a3b8">Tidak ada data</span></div>`;
+  } else {
+    el.innerHTML=`<h4>Intensitas Per Puskesmas</h4><div style="font-size:10px;color:#64748b;margin-bottom:4px">Warna = Puskesmas<br>Gradasi Gelap = Kepadatan<br>Warna Pucat = Tidak Ada Data</div>`;
+  }
+}
+
+function drawPuskesmasMarkers(filtered){
+  pusMarkers.forEach(m=>leafMap.removeLayer(m)); pusMarkers=[];
+  const tahun=document.getElementById("tahun").value,selPus=document.getElementById("puskesmas").value;
+  const bayiByPus={};
+  dataBayi.filter(d=>(tahun==="all"||String(d.tahun)===tahun)&&d.gender==="total")
+    .forEach(d=>{const p=kel_to_pus_js[d.kelurahan_shp];if(p)bayiByPus[p]=(bayiByPus[p]||0)+(d.jumlah||0);});
+  const imunByPus={};
+  filtered.filter(d=>d.gender==="total")
+    .forEach(d=>{const p=d.puskesmas_map;if(p)imunByPus[p]=(imunByPus[p]||0)+(d.jumlah||0);});
+  const showPus=selPus==='all'?Object.keys(pusCoords):[selPus];
+  for(const name of showPus){
+    const coord=pusCoords[name];if(!coord)continue;
+    const pCol=PUS_COLORS[name]?PUS_COLORS[name].base:'#888';
+    const imun=imunByPus[name]||0,bayi=bayiByPus[name]||0;
+    const kels=mapPus[name]||[],sz=Math.max(14,Math.min(30,imun/200+12));
+    const icon=L.divIcon({className:'',html:`<div style="width:${sz}px;height:${sz}px;background:${pCol};border:2.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">&#127973;</div>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
+    const marker=L.marker([coord.lat,coord.lon],{icon,zIndexOffset:1000})
+      .bindPopup(`<div class="pus-popup"><strong style="color:${pCol}">PKM ${name}</strong><div class="pus-addr">${coord.alamat}</div><div style="color:#64748b;font-size:10px;margin-bottom:4px">Wilayah: ${kels.join(', ')}</div><div class="pus-stat"><div class="stat-item"><div class="stat-num" style="color:${pCol}">${imun.toLocaleString('id-ID')}</div><div class="stat-lbl">Total Imunisasi</div></div><div class="stat-item"><div class="stat-num">${bayi.toLocaleString('id-ID')}</div><div class="stat-lbl">Bayi Lahir</div></div></div></div>`,{maxWidth:280})
+      .addTo(leafMap);
+    pusMarkers.push(marker);
+  }
+}
+
+// =========================================
+// YNAV
+// =========================================
+function rebuildYnav(t,ys,ft){
+  const nav=document.getElementById(`${t}-ynav`),st=ynavState[t];
+  if(ft!=='all'){nav.classList.add('hidden');st.years=[];return;}
+  nav.classList.remove('hidden'); st.years=ys;
+  if(st.idx>=st.years.length)st.idx=st.years.length-1;
+  if(st.idx<0)st.idx=0;
+  document.getElementById(`${t}-pills`).innerHTML=st.years.map((y,i)=>`<div class="ynav-pill${i===st.idx?' active':''}" onclick="ynavJump('${t}',${i})">${y}</div>`).join('');
+  document.getElementById(`${t}-prev`).disabled=st.idx<=0;
+  document.getElementById(`${t}-next`).disabled=st.idx>=st.years.length-1;
+}
+function ynavJump(t,i){ynavState[t].idx=i;redrawTab(t);}
+function ynavStep(t,d){const s=ynavState[t];s.idx=Math.max(0,Math.min(s.years.length-1,s.idx+d));redrawTab(t);}
+function redrawTab(t){
+  const f=getFiltered(),tahun=document.getElementById("tahun").value;
+  const ys=[...new Set(f.map(d=>String(d.tahun)).filter(Boolean))].sort();
+  rebuildYnav(t,ys,tahun);
+  if(t==='trend')drawTrend(f);
+  if(t==='compare')drawCompareChart(f);
+  if(t==='scatter')drawScatterChart(f);
+}
+function getActiveYear(t){
+  const tahun=document.getElementById("tahun").value;
+  if(tahun!=='all')return tahun;
+  const s=ynavState[t];return s.years.length>0?s.years[s.idx]:null;
+}
+
+// =========================================
+// LAYOUT BASE — dipakai semua chart Plotly
+// =========================================
+const LAYOUT_BASE = {
+  paper_bgcolor:'rgba(0,0,0,0)',
+  plot_bgcolor:'rgba(0,0,0,0)',
+  font:{family:'Plus Jakarta Sans, sans-serif',color:'#64748b',size:11},
+  margin:{t:40,l:55,r:20,b:160},
+  legend:{
+    orientation:'h',
+    y:-0.38,
+    x:0,
+    xanchor:'left',
+    font:{size:10.5},
+    tracegroupgap:6,
+    entrywidth:150
+  },
+  xaxis:{gridcolor:'#e2e8f0',linecolor:'#e2e8f0',tickfont:{size:10}},
+  yaxis:{gridcolor:'#e2e8f0',linecolor:'#e2e8f0',tickfont:{size:10}}
+};
+
+function getTraceColor(key,mode){
+  if(mode==='kelurahan'){const pus=kel_to_pus_js[key.toUpperCase()]||kel_to_pus_js[key];return pus&&PUS_COLORS[pus]?PUS_COLORS[pus].base:'#64748b';}
+  if(mode==='gender')return key==='laki-laki'?'#2563eb':key==='perempuan'?'#db2777':'#64748b';
+  const pal=Object.values(PUS_COLORS).map(c=>c.base),idx=Object.keys(PUS_COLORS).indexOf(key);
+  return pal[Math.abs(idx)%pal.length]||'#64748b';
+}
+
+
+// =========================================
+// BUILD CUSTOM TREND LEGEND
+// =========================================
+function buildTrendLegend(traces, mode) {
+  const el = document.getElementById('trend-custom-legend');
+  if (!el) return;
+  el.innerHTML = '';
+
+  if (mode === 'gender') {
+    // Simple: Laki-laki / Perempuan / Total
+    const div = document.createElement('div');
+    div.className = 'tcl-gender-group';
+    traces.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'tcl-gender-item';
+      const line = document.createElement('div');
+      line.className = 'tcl-gender-line';
+      line.style.background = t.line.color;
+      const label = document.createElement('span');
+      label.textContent = t.name;
+      item.appendChild(line);
+      item.appendChild(label);
+      div.appendChild(item);
+    });
+    el.appendChild(div);
+
+  } else if (mode === 'penyakit') {
+    // List penyakit with color dots
+    const div = document.createElement('div');
+    div.className = 'tcl-penyakit-group';
+    traces.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'tcl-penyakit-item';
+      const dot = document.createElement('div');
+      dot.className = 'tcl-penyakit-dot';
+      dot.style.background = t.line.color;
+      const label = document.createElement('span');
+      label.textContent = t.name;
+      item.appendChild(dot);
+      item.appendChild(label);
+      div.appendChild(item);
+    });
+    el.appendChild(div);
+
+  } else {
+    // mode === 'kelurahan' — group by puskesmas
+    // Build map: puskesmas -> [{name, color}]
+    const pusMap = {};
+    traces.forEach(t => {
+      const kelName = t.name;
+      const kelUpper = kelName.toUpperCase();
+      const pus = kel_to_pus_js[kelUpper] || kel_to_pus_js[kelName] || 'Lainnya';
+      if (!pusMap[pus]) pusMap[pus] = [];
+      pusMap[pus].push({ name: kelName, color: t.line.color });
+    });
+
+    // Sort puskesmas alphabetically
+    const sortedPus = Object.keys(pusMap).sort();
+    sortedPus.forEach(pus => {
+      const group = document.createElement('div');
+      group.className = 'tcl-pus-group';
+
+      const pCol = PUS_COLORS[pus] ? PUS_COLORS[pus].base : '#888';
+      const header = document.createElement('div');
+      header.className = 'tcl-pus-header';
+      header.style.borderColor = pCol;
+      header.style.color = pCol;
+
+      const dot = document.createElement('div');
+      dot.className = 'tcl-pus-dot';
+      dot.style.background = pCol;
+      dot.style.border = `1.5px solid ${pCol}`;
+
+      const hLabel = document.createElement('span');
+      hLabel.textContent = pus;
+      header.appendChild(dot);
+      header.appendChild(hLabel);
+      group.appendChild(header);
+
+      const kelList = document.createElement('div');
+      kelList.className = 'tcl-kel-list';
+
+      pusMap[pus].forEach(k => {
+        const item = document.createElement('div');
+        item.className = 'tcl-kel-item';
+        const line = document.createElement('div');
+        line.className = 'tcl-kel-line';
+        line.style.background = k.color;
+        const label = document.createElement('span');
+        label.textContent = k.name.split(' ').map(w => w ? w[0] + w.slice(1).toLowerCase() : '').join(' ');
+        item.appendChild(line);
+        item.appendChild(label);
+        kelList.appendChild(item);
+      });
+
+      group.appendChild(kelList);
+      el.appendChild(group);
+    });
+  }
+}
+
+// =========================================
+// DRAW TREND
+// =========================================
+function drawTrend(filtered){
+  const mode=document.getElementById("mode_chart").value;
+  const activeYear=getActiveYear('trend');
+  const bulanOrder=["jan","feb","mar","apr","mei","jun","jul","agu","sep","okt","nov","des"];
+  const yf=activeYear?filtered.filter(d=>String(d.tahun)===String(activeYear)):filtered;
+  const grouped={};
+  yf.forEach(d=>{
+    if(mode==='gender'&&d.gender==='total')return;
+    if(mode!=='gender'&&d.gender!=='total')return;
+    let key;
+    if(mode==="gender")key=d.gender||"Unknown";
+    else if(mode==="penyakit")key=d.penyakit||"Unknown";
+    else key=d.kelurahan_shp||"Unknown";
+    const b=(d.bulan||"").toLowerCase();
+    if(!grouped[key])grouped[key]={};
+    grouped[key][b]=(grouped[key][b]||0)+d.jumlah;
+  });
+  const traces=Object.entries(grouped).map(([key,vals])=>({
+    x:bulanOrder,
+    y:bulanOrder.map(b=>vals[b]||0),
+    mode:'lines+markers',type:'scatter',
+    name:mode==='gender'?genderLabel(key):key,
+    line:{color:getTraceColor(key,mode),width:2.5},
+    marker:{size:5,color:getTraceColor(key,mode)}
+  }));
+  const i_raw=document.getElementById("indikator").value;
+  const baseTitle=i_raw==="all"?"Tren Imunisasi Bulanan":i_raw;
+  const yearLabel=activeYear?` - ${activeYear}`:' - Semua Tahun';
+  Plotly.newPlot('chart-trend', traces, {
+    ...LAYOUT_BASE,
+    title:{text:baseTitle+yearLabel, font:{size:13,color:'#1e293b'}},
+    xaxis:{
+      ...LAYOUT_BASE.xaxis,
+      title:{text:'Bulan', font:{size:11}, standoff:14}
+    },
+    yaxis:{
+      ...LAYOUT_BASE.yaxis,
+      title:{text:'Jumlah', font:{size:11}}
+    },
+    showlegend:false,
+    margin:{t:44,l:55,r:20,b:40}
+  }, {responsive:true,displayModeBar:false});
+  buildTrendLegend(traces, mode);
+}
+
+// =========================================
+// DRAW COMPARE
+// =========================================
+function drawCompareChart(filtered){
+  const pus=document.getElementById("puskesmas").value;
+  const kelSel=document.getElementById("kelurahan").value;
+  const activeYear=getActiveYear('compare');
+  const mode=document.getElementById("mode_chart").value;
+  const imunF_all=filtered.filter(d=>activeYear===null||String(d.tahun)===String(activeYear));
+  const bayiF=dataBayi.filter(d=>
+    d.gender==="total"&&
+    (pus==="all"||kel_to_pus_js[d.kelurahan_shp]===pus)&&
+    (kelSel==="all"||d.kelurahan_shp===kelSel)&&
+    (activeYear===null||String(d.tahun)===String(activeYear))
+  );
+  const yearLabel=activeYear?` - ${activeYear}`:' - Semua Tahun';
+
+  if(mode==="gender"){
+    const genders=["laki-laki","perempuan"];
+    const kels=[...new Set(imunF_all.map(d=>d.kelurahan_shp))].sort();
+    const traces=genders.map(g=>{
+      const gVals={};
+      imunF_all.filter(d=>d.gender===g).forEach(d=>{gVals[d.kelurahan_shp]=(gVals[d.kelurahan_shp]||0)+(d.jumlah||0);});
+      return {
+        x:kels.map(k=>gVals[k]||0),y:kels,type:'bar',orientation:'h',
+        name:genderLabel(g),
+        marker:{color:g==='laki-laki'?'#2563eb':'#db2777',opacity:0.85},
+        texttemplate:'%{x:,}',textposition:'outside',textfont:{size:9,color:'#1e293b'}
+      };
+    });
+    Plotly.newPlot('chart-compare',traces,{
+      ...LAYOUT_BASE,
+      title:{text:`Imunisasi Per Jenis Kelamin Per Kelurahan${yearLabel}`,font:{size:12,color:'#1e293b'}},
+      barmode:'group',
+      margin:{t:40,l:130,r:80,b:40},
+      xaxis:{...LAYOUT_BASE.xaxis,title:{text:'Jumlah',font:{size:11}}},
+      yaxis:{...LAYOUT_BASE.yaxis,tickfont:{size:9},automargin:true},
+      legend:{orientation:'h',y:-0.12,font:{size:10}}
+    },{responsive:true,displayModeBar:false});
+
+  } else if(mode==="penyakit"){
+    const penyakitMap={};
+    imunF_all.filter(d=>d.gender==="total").forEach(d=>{
+      const p=d.penyakit||"Unknown";
+      penyakitMap[p]=(penyakitMap[p]||0)+(d.jumlah||0);
+    });
+    const penyakitList=[...new Set(Object.keys(penyakitMap))].sort();
+    const pcfPenyakit=Object.values(PUS_COLORS).map(c=>c.base);
+    Plotly.newPlot('chart-compare',[{
+      x:penyakitList.map(p=>penyakitMap[p]||0),y:penyakitList,
+      type:'bar',orientation:'h',name:'Total Imunisasi',
+      marker:{color:penyakitList.map((_,i)=>pcfPenyakit[i%pcfPenyakit.length]),opacity:0.85},
+      texttemplate:'%{x:,}',textposition:'outside',textfont:{size:9,color:'#1e293b'}
+    }],{
+      ...LAYOUT_BASE,
+      title:{text:`Total Imunisasi Per Penyakit${yearLabel}`,font:{size:12,color:'#1e293b'}},
+      margin:{t:40,l:160,r:80,b:40},
+      xaxis:{...LAYOUT_BASE.xaxis,title:{text:'Jumlah',font:{size:11}}},
+      yaxis:{...LAYOUT_BASE.yaxis,tickfont:{size:9},automargin:true},
+      legend:{orientation:'h',y:-0.12,font:{size:10}}
+    },{responsive:true,displayModeBar:false});
+
+  } else {
+    const imunMap={};
+    imunF_all.filter(d=>d.gender==="total").forEach(d=>{imunMap[d.kelurahan_shp]=(imunMap[d.kelurahan_shp]||0)+(d.jumlah||0);});
+    const bayiMap={};
+    bayiF.forEach(d=>{bayiMap[d.kelurahan_shp]=(bayiMap[d.kelurahan_shp]||0)+(d.jumlah||0);});
+    const kels=[...new Set([...Object.keys(imunMap),...Object.keys(bayiMap)])].sort();
+    const pcf=k=>{const p=kel_to_pus_js[k];return p&&PUS_COLORS[p]?PUS_COLORS[p].base:'#94a3b8';};
+    Plotly.newPlot('chart-compare',[
+      {x:kels.map(k=>imunMap[k]||0),y:kels,type:'bar',orientation:'h',name:'Total Imunisasi',
+       marker:{color:kels.map(k=>pcf(k)),opacity:0.85},
+       texttemplate:'%{x:,}',textposition:'outside',textfont:{size:9,color:'#1e293b'}},
+      {x:kels.map(k=>bayiMap[k]||0),y:kels,type:'bar',orientation:'h',name:'Bayi Lahir',
+       marker:{color:'#94a3b8',opacity:0.55},
+       texttemplate:'%{x:,}',textposition:'outside',textfont:{size:9,color:'#475569'}}
+    ],{
+      ...LAYOUT_BASE,
+      title:{text:`Total Imunisasi vs Bayi Lahir Per Kelurahan${yearLabel}`,font:{size:12,color:'#1e293b'}},
+      barmode:'group',
+      margin:{t:40,l:130,r:80,b:40},
+      xaxis:{...LAYOUT_BASE.xaxis,title:{text:'Jumlah',font:{size:11}}},
+      yaxis:{...LAYOUT_BASE.yaxis,tickfont:{size:9},automargin:true},
+      legend:{orientation:'h',y:-0.12,font:{size:10}}
+    },{responsive:true,displayModeBar:false});
+  }
+}
+
+// =========================================
+// DRAW SCATTER
+// =========================================
+function drawScatterChart(filtered){
+  const pus=document.getElementById("puskesmas").value,kelSel=document.getElementById("kelurahan").value;
+  const activeYear=getActiveYear('scatter'),bulanSel=document.getElementById("scatter_bulan").value;
+  const showQuad=document.getElementById("scatter_quadrant").value==="show";
+  const showLabels=document.getElementById("scatter_labels").value==="show";
+
+  const imunMap={};
+  filtered.filter(d=>{
+    if(d.gender!=="total")return false;
+    if(activeYear!==null&&String(d.tahun)!==String(activeYear))return false;
+    if(bulanSel!=="all"&&(d.bulan||"").toLowerCase()!==bulanSel)return false;
+    return true;
+  }).forEach(d=>{imunMap[d.kelurahan_shp]=(imunMap[d.kelurahan_shp]||0)+(d.jumlah||0);});
+
+  const bayiMap={};
+  dataBayi.filter(d=>{
+    if(d.gender!=="total")return false;
+    if(pus!=="all"&&kel_to_pus_js[d.kelurahan_shp]!==pus)return false;
+    if(kelSel!=="all"&&d.kelurahan_shp!==kelSel)return false;
+    if(activeYear!==null&&String(d.tahun)!==String(activeYear))return false;
+    return true;
+  }).forEach(d=>{bayiMap[d.kelurahan_shp]=(bayiMap[d.kelurahan_shp]||0)+(d.jumlah||0);});
+
+  const jarakMap={},pusByKel={};
+  dataCoverage.forEach(d=>{
+    if(d.jarak_puskesmas_km)jarakMap[d.kelurahan_shp]=d.jarak_puskesmas_km;
+    if(d.puskesmas_map)pusByKel[d.kelurahan_shp]=d.puskesmas_map;
+  });
+
+  const kels=[...new Set(Object.keys(imunMap))].filter(k=>jarakMap[k]!=null&&(imunMap[k]||0)>0);
+  const nodataEl=document.getElementById('scatter-nodata');
+  if(kels.length===0){
+    nodataEl.classList.add('show');
+    Plotly.purge('chart-scatter');
+    document.getElementById('r-value-display').textContent='\u2014';
+    updateScatterCards([],[],[],null,null,activeYear,bulanSel,pus,kelSel);
+    return;
+  }
+  nodataEl.classList.remove('show');
+
+  const xVals=kels.map(k=>jarakMap[k]);
+  const yVals=kels.map(k=>imunMap[k]);
+  const bVals=kels.map(k=>bayiMap[k]||0);
+
+  const xSorted=[...xVals].sort((a,b)=>a-b);
+  const ySorted=[...yVals].sort((a,b)=>a-b);
+  const medX=xSorted[Math.floor(xSorted.length/2)];
+  const medY=ySorted[Math.floor(ySorted.length/2)];
+
+  function getQIdx(x,y){ if(x<=medX&&y>=medY)return 0; if(x>medX&&y>=medY)return 1; if(x<=medX&&y<medY)return 2; return 3; }
+
+  const maxBayi=Math.max(...bVals,1);
+
+  const n=xVals.length;
+  // ── Pearson Correlation ──
+  const meanX=xVals.reduce((a,b)=>a+b,0)/n;
+  const meanY=yVals.reduce((a,b)=>a+b,0)/n;
+  let covXY=0,varX=0,varY=0;
+  for(let i=0;i<n;i++){
+    const dx=xVals[i]-meanX, dy=yVals[i]-meanY;
+    covXY+=dx*dy; varX+=dx*dx; varY+=dy*dy;
+  }
+  const rVal=(varX===0||varY===0)?NaN:covXY/Math.sqrt(varX*varY);
+  // Regression line still based on original values for visual
+  let sX=0,sY=0,sXY=0,sX2=0;
+  xVals.forEach((x,i)=>{sX+=x;sY+=yVals[i];sXY+=x*yVals[i];sX2+=x*x;});
+  const slope=(n*sXY-sX*sY)/(n*sX2-sX*sX);
+  const intercept=(sY-slope*sX)/n;
+
+  document.getElementById('r-value-display').textContent=isNaN(rVal)?'\u2014':rVal.toFixed(3);
+
+  const xMin=Math.min(...xVals),xMax=Math.max(...xVals);
+  const yMin=Math.min(...yVals),yMax=Math.max(...yVals);
+  const xPad=(xMax-xMin)*0.12||0.25,yPad=(yMax-yMin)*0.12||30;
+  const xMinR=xMin-xPad,xMaxR=xMax+xPad,yMinR=Math.max(0,yMin-yPad),yMaxR=yMax+yPad;
+
+  const traces=[];
+  QUAD_META.forEach((qm,qi)=>{
+    const qkels=kels.filter((_,i)=>getQIdx(xVals[i],yVals[i])===qi);
+    if(qkels.length===0)return;
+    const qx=qkels.map(k=>jarakMap[k]);
+    const qy=qkels.map(k=>imunMap[k]);
+    const qb=qkels.map(k=>bayiMap[k]||0);
+    const qsz=qb.map(v=>Math.max(8,Math.min(36,(v/maxBayi)*28+8)));
+    traces.push({
+      x:qx,y:qy,mode:showLabels?'markers+text':'markers',type:'scatter',
+      name:qm.label,
+      text:showLabels?qkels.map(k=>k.split(' ').map(w=>w?w[0]+w.slice(1).toLowerCase():'').join(' ')):qkels,
+      textposition:'top center',textfont:{size:8,color:qm.borderColor},
+      marker:{size:qsz,color:qm.markerFill,line:{color:qm.markerBorder,width:1.8},symbol:'circle'},
+      customdata:qkels.map((k,i)=>[
+        kel_to_pus_js[k]||pusByKel[k]||'\u2014',
+        (qb[i]||0).toLocaleString('id-ID'),
+        qx[i].toFixed(2),
+        qy[i].toLocaleString('id-ID'),
+        qm.label,k
+      ]),
+      hovertemplate:
+        '<span style="color:#1e293b;font-size:13px;font-weight:700">%{customdata[5]}</span><br>'+
+        '<span style="color:#1e293b;">Puskesmas: <b>%{customdata[0]}</b></span><br>'+
+        '<span style="color:#1e293b;">Jarak Ke PKM: <b>%{customdata[2]} Km</b></span><br>'+
+        '<span style="color:#1e293b;">Total Imunisasi: <b>%{customdata[3]}</b></span><br>'+
+        '<span style="color:#1e293b;">Bayi Lahir: <b>%{customdata[1]}</b></span><br>'+
+        '<b style="color:#1e293b;font-size:12px;font-weight:800">%{customdata[4]}</b>'+
+        '<extra></extra>'
+    });
+  });
+
+  traces.push({
+    x:[xMinR,xMaxR],y:[slope*xMinR+intercept,slope*xMaxR+intercept],
+    mode:'lines',type:'scatter',name:'Tren Regresi',showlegend:false,
+    line:{color:'rgba(100,116,139,0.50)',width:2,dash:'dot'},hoverinfo:'skip'
+  });
+
+  const shapes=[],annotations=[];
+  if(showQuad){
+    const quadRegions=[
+      {x0:xMinR,x1:medX,y0:medY,y1:yMaxR,q:0},{x0:medX,x1:xMaxR,y0:medY,y1:yMaxR,q:1},
+      {x0:xMinR,x1:medX,y0:yMinR,y1:medY,q:2},{x0:medX,x1:xMaxR,y0:yMinR,y1:medY,q:3}
+    ];
+    quadRegions.forEach(r=>{
+      shapes.push({type:'rect',xref:'x',yref:'y',x0:r.x0,x1:r.x1,y0:r.y0,y1:r.y1,
+        fillcolor:QUAD_META[r.q].fillColor,line:{width:0},layer:'below'});
+    });
+    shapes.push({type:'line',xref:'x',yref:'y',x0:medX,x1:medX,y0:yMinR,y1:yMaxR,line:{color:'rgba(100,116,139,0.50)',width:1.5,dash:'dash'}});
+    shapes.push({type:'line',xref:'x',yref:'y',x0:xMinR,x1:xMaxR,y0:medY,y1:medY,line:{color:'rgba(100,116,139,0.50)',width:1.5,dash:'dash'}});
+    const cornerLabels=[
+      {x:xMinR+(medX-xMinR)*0.06,y:yMaxR-(yMaxR-medY)*0.05,text:'Q1: Ideal',color:'#3B6D11',xa:'left'},
+      {x:xMaxR-(xMaxR-medX)*0.06,y:yMaxR-(yMaxR-medY)*0.05,text:'Q2: Resilient',color:'#185FA5',xa:'right'},
+      {x:xMinR+(medX-xMinR)*0.06,y:yMinR+(medY-yMinR)*0.07,text:'Q3: Investigasi',color:'#BA7517',xa:'left'},
+      {x:xMaxR-(xMaxR-medX)*0.06,y:yMinR+(medY-yMinR)*0.07,text:'Q4: Prioritas',color:'#A32D2D',xa:'right'}
+    ];
+    cornerLabels.forEach(c=>annotations.push({
+      xref:'x',yref:'y',x:c.x,y:c.y,text:`<b>${c.text}</b>`,showarrow:false,
+      font:{size:9,color:c.color},xanchor:c.xa,yanchor:'top',
+      bgcolor:'rgba(255,255,255,0.82)',borderpad:2,bordercolor:c.color,borderwidth:1
+    }));
+    annotations.push(
+      {xref:'x',yref:'paper',x:medX,y:1.02,text:`Med. Jarak ${medX.toFixed(1)} Km`,showarrow:false,font:{size:8,color:'#94a3b8'},xanchor:'center'},
+      {xref:'paper',yref:'y',x:1.01,y:medY,text:`Med. ${medY.toLocaleString('id-ID')}`,showarrow:false,font:{size:8,color:'#94a3b8'},xanchor:'left'}
+    );
+  }
+
+  const yearLabel=activeYear?` - ${activeYear}`:' - Semua Tahun';
+  const bulanLabel=bulanSel!=='all'?` - ${bulanSel.charAt(0).toUpperCase()+bulanSel.slice(1)}`:'';
+  Plotly.newPlot('chart-scatter',traces,{
+    ...LAYOUT_BASE,
+    title:{text:`Jarak Ke Puskesmas Vs Total Imunisasi${yearLabel}${bulanLabel}`,font:{size:12,color:'#1e293b'}},
+    shapes,annotations,
+    margin:{t:55,l:68,r:44,b:65},
+    xaxis:{...LAYOUT_BASE.xaxis,title:{text:'Jarak Ke Puskesmas (Km) - Aksesibilitas Geografis',font:{size:10}},range:[xMinR,xMaxR],zeroline:false},
+    yaxis:{...LAYOUT_BASE.yaxis,title:{text:'Total Imunisasi',font:{size:10}},range:[yMinR,yMaxR],zeroline:false,tickformat:',d'},
+    legend:{orientation:'h',y:-0.24,font:{size:9}},
+    hoverlabel:{bgcolor:'#ffffff',bordercolor:'#e2e8f0',font:{family:'Plus Jakarta Sans, sans-serif',size:12,color:'#1e293b'}}
+  },{responsive:true,displayModeBar:false});
+
+  const kelData=kels.map((k,i)=>({
+    name:k,pus:kel_to_pus_js[k]||pusByKel[k]||'\u2014',
+    jarak:xVals[i],imun:yVals[i],bayi:bVals[i],qIdx:getQIdx(xVals[i],yVals[i])
+  }));
+  updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pus,kelSel,medX,medY);
+}
+
+// =========================================
+// SCATTER CARDS
+// =========================================
+function updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pusF,kelF,medX,medY){
+  const summaryEl=document.getElementById('stat-summary-text');
+  const chipsEl=document.getElementById('stat-chips');
+  const cardsEl=document.getElementById('quad-cards-grid');
+
+  if(!kelData||kelData.length===0){
+    summaryEl.innerHTML=`<em style="color:#94a3b8">Tidak ada data. Ubah filter untuk melihat analisis.</em>`;
+    chipsEl.innerHTML=''; cardsEl.innerHTML=''; return;
+  }
+
+  const groups=[[],[],[],[]];
+  kelData.forEach(d=>groups[d.qIdx].push(d));
+
+  const r=isNaN(rVal)?'N/A':rVal.toFixed(3);
+  const arah=(!isNaN(rVal)&&rVal<0)?'negatif':'positif';
+  const kuat=isNaN(rVal)?'\u2014':Math.abs(rVal)>=0.6?'kuat':Math.abs(rVal)>=0.35?'sedang':'lemah';
+  const avgImun=Math.round(yVals.reduce((a,b)=>a+b,0)/yVals.length);
+  const tahunTeks=activeYear||'semua tahun';
+  const q4Worst=groups[3].sort((a,b)=>a.imun-b.imun).slice(0,3).map(d=>d.name).join(', ');
+
+  let summary=`Tahun <strong>${tahunTeks}</strong>: rata-rata imunisasi <strong>${avgImun.toLocaleString('id-ID')}</strong> dosis per kelurahan. `;
+  summary+=`Korelasi Pearson jarak&#8211;imunisasi bersifat <strong>${arah} ${kuat}</strong> (r&nbsp;=&nbsp;${r}, n&nbsp;=&nbsp;${n}). `;
+  if(!isNaN(rVal)&&rVal<-0.3)summary+=`Semakin jauh akses ke puskesmas, imunisasi cenderung lebih rendah.`;
+  else if(!isNaN(rVal)&&rVal<0)summary+=`Ada kecenderungan lemah bahwa wilayah yang jauh sedikit lebih rendah imunisasinya.`;
+  else summary+=`Jarak belum menjadi penentu utama aktivitas imunisasi &#8212; faktor lain lebih dominan.`;
+  if(groups[3].length>0&&q4Worst)summary+=` Prioritas intervensi Q4: <strong style="color:#A32D2D">${q4Worst}</strong>.`;
+  summaryEl.innerHTML=summary;
+
+  const chipDefs=[
+    {cls:'chip-q1',label:`Q1 Ideal: ${groups[0].length}`},
+    {cls:'chip-q2',label:`Q2 Resilient: ${groups[1].length}`},
+    {cls:'chip-q3',label:`Q3 Investigasi: ${groups[2].length}`},
+    {cls:'chip-q4',label:`Q4 Prioritas: ${groups[3].length}`},
+    {cls:'chip-neutral',label:`r = ${r} (Pearson)`},
+    {cls:'chip-neutral',label:`Avg: ${avgImun.toLocaleString('id-ID')} Dosis`},
+  ];
+  chipsEl.innerHTML=chipDefs.map(c=>`<span class="stat-chip ${c.cls}">${c.label}</span>`).join('');
+
+  cardsEl.innerHTML=QUAD_META.map((qm,qi)=>{
+    const kels=groups[qi];
+    const sorted=[...kels].sort((a,b)=>b.imun-a.imun);
+    const kelRows=sorted.length===0
+      ?`<div class="qcard-empty">Tidak Ada Kelurahan</div>`
+      :`<div class="qcard-kel-header"><span>Kelurahan</span><span>Puskesmas</span><span style="text-align:right">Jarak PKM</span><span style="text-align:right">Imunisasi</span></div>
+        <div class="qcard-kel-list">
+          ${sorted.map(k=>`<div class="qcard-kel-row">
+            <span class="qcard-kel-name">${k.name.charAt(0)+k.name.slice(1).toLowerCase()}</span>
+            <span class="qcard-kel-pus">${k.pus}</span>
+            <span class="qcard-kel-jarak">${k.jarak.toFixed(2)} Km</span>
+            <span class="qcard-kel-val">${k.imun.toLocaleString('id-ID')}</span>
+          </div>`).join('')}
+        </div>`;
+    return `<div class="qcard ${qm.cls}">
+      <div class="qcard-header">
+        <div class="qcard-icon">${qm.icon}</div>
+        <div><div class="qcard-title">${qm.label}</div><div class="qcard-sub">${qm.sub}</div></div>
+        <div class="qcard-count">${kels.length}</div>
+      </div>
+      <div class="qcard-desc">${qm.desc}</div>
+      ${kelRows}
+    </div>`;
+  }).join('');
+}
+
+// =========================================
+// KPI
+// =========================================
+function updateKPI(filtered){
+  const tahun=document.getElementById("tahun").value,pus=document.getElementById("puskesmas").value,kelSel=document.getElementById("kelurahan").value;
+  const rowsImun=filtered.filter(d=>d.gender==='total');
+  const totalImun=rowsImun.reduce((a,d)=>a+(d.jumlah||0),0);
+  const imunPerKel={};
+  rowsImun.forEach(d=>{imunPerKel[d.kelurahan_shp]=(imunPerKel[d.kelurahan_shp]||0)+(d.jumlah||0);});
+  const rowsBayi=dataBayi.filter(d=>d.gender==="total"&&(tahun==="all"||String(d.tahun)===tahun)&&(pus==="all"||kel_to_pus_js[d.kelurahan_shp]===pus)&&(kelSel==="all"||d.kelurahan_shp===kelSel));
+  const totalBayi=rowsBayi.reduce((a,d)=>a+(d.jumlah||0),0);
+  const bayiPerKel={};
+  rowsBayi.forEach(d=>{bayiPerKel[d.kelurahan_shp]=(bayiPerKel[d.kelurahan_shp]||0)+(d.jumlah||0);});
+  const kelImunSet=new Set(Object.keys(imunPerKel).filter(k=>imunPerKel[k]>0));
+  const kelBayiSet=new Set(Object.keys(bayiPerKel).filter(k=>bayiPerKel[k]>0));
+  const kelBothCount=[...kelImunSet].filter(k=>kelBayiSet.has(k)).length;
+  const kelImunEntries=Object.entries(imunPerKel).filter(([,v])=>v>0);
+  let maxKel='\u2014',maxVal=0,minKel='\u2014',minVal=Infinity;
+  kelImunEntries.forEach(([k,v])=>{if(v>maxVal){maxVal=v;maxKel=k;}if(v<minVal){minVal=v;minKel=k;}});
+  if(kelImunEntries.length===0){maxVal=0;minVal=0;maxKel='\u2014';minKel='\u2014';}
+  const fmt=s=>s.split(' ').map(w=>w?w[0]+w.slice(1).toLowerCase():'').join(' ');
+  document.getElementById('kpi-total-imun').textContent=totalImun.toLocaleString('id-ID');
+  document.getElementById('kpi-total-bayi').textContent=totalBayi.toLocaleString('id-ID');
+  document.getElementById('kpi-kel-data').textContent=kelBothCount;
+  document.getElementById('kpi-max-val').textContent=maxVal>0?maxVal.toLocaleString('id-ID'):'\u2014';
+  document.getElementById('kpi-max-name').textContent=maxKel!=='\u2014'?fmt(maxKel):'\u2014';
+  document.getElementById('kpi-min-val').textContent=(minVal!==Infinity&&minVal>0)?minVal.toLocaleString('id-ID'):'\u2014';
+  document.getElementById('kpi-min-name').textContent=minKel!=='\u2014'?fmt(minKel):'\u2014';
+}
+
+// =========================================
+// CASCADE FILTER
+// =========================================
+function unique(arr){return[...new Set(arr.filter(x=>x!=null&&x!==''))];}
+function fill(id,arr){const el=document.getElementById(id),prev=el.value;el.innerHTML='<option value="all">-- All --</option>'+unique(arr).sort().map(v=>`<option value="${v}">${v}</option>`).join('');if([...el.options].some(o=>o.value===prev))el.value=prev;}
+function updateKelurahan(){const p=document.getElementById("puskesmas").value;fill("kelurahan",p==="all"?data.map(d=>d.kelurahan_shp):(mapPus[p]||[]));updateTahun();}
+function updateTahun(){const p=document.getElementById("puskesmas").value,k=document.getElementById("kelurahan").value;fill("tahun",data.filter(d=>(p==="all"||d.puskesmas_map===p)&&(k==="all"||d.kelurahan_shp===k)).map(d=>d.tahun));updateIndikator();}
+function updateIndikator(){const p=document.getElementById("puskesmas").value,k=document.getElementById("kelurahan").value,t=document.getElementById("tahun").value;fill("indikator",data.filter(d=>(p==="all"||d.puskesmas_map===p)&&(k==="all"||d.kelurahan_shp===k)&&(t==="all"||String(d.tahun)===t)).map(d=>d.indikator));updatePenyakit();}
+function updatePenyakit(){
+  const p=document.getElementById("puskesmas").value,k=document.getElementById("kelurahan").value,t=document.getElementById("tahun").value,i_raw=document.getElementById("indikator").value;
+  const i_key=indikator_alias_map[i_raw]||i_raw;
+  if(i_raw!=="all"&&indikator_map[i_key]){
+    const f=data.filter(d=>(p==="all"||d.puskesmas_map===p)&&(k==="all"||d.kelurahan_shp===k)&&(t==="all"||String(d.tahun)===t)&&d.indikator===i_raw);
+    const ada=new Set(f.map(d=>d.penyakit));
+    const opts=indikator_map[i_key].filter(x=>ada.has(x));
+    fill("penyakit",opts.length>0?opts:[...ada]);return;
+  }
+  fill("penyakit",data.filter(d=>(p==="all"||d.puskesmas_map===p)&&(k==="all"||d.kelurahan_shp===k)&&(t==="all"||String(d.tahun)===t)&&(i_raw==="all"||d.indikator===i_raw)).map(d=>d.penyakit));
+}
+
+function getFiltered(){
+  const p=document.getElementById('puskesmas').value,k=document.getElementById('kelurahan').value,t=document.getElementById('tahun').value,i_raw=document.getElementById('indikator').value,pe=document.getElementById('penyakit').value;
+  const i_key=indikator_alias_map[i_raw]||i_raw;
+  const vp=(i_raw!=="all"&&indikator_map[i_key])?new Set(indikator_map[i_key]):null;
+  return data.filter(d=>{
+    if(p!=="all"&&d.puskesmas_map!==p)return false;
+    if(k!=="all"&&d.kelurahan_shp!==k)return false;
+    if(t!=="all"&&String(d.tahun)!==t)return false;
+    if(i_raw!=="all"&&d.indikator!==i_raw)return false;
+    if(pe!=="all"){if(d.penyakit!==pe)return false;}
+    else if(vp){if(!vp.has(d.penyakit))return false;}
+    return true;
+  });
+}
+
+function update(){
+  const filtered=getFiltered(),tahun=document.getElementById("tahun").value;
+  const allYears=[...new Set(filtered.map(d=>String(d.tahun)).filter(Boolean))].sort();
+  rebuildYnav('trend',allYears,tahun);rebuildYnav('compare',allYears,tahun);rebuildYnav('scatter',allYears,tahun);
+  drawTrend(filtered);drawCompareChart(filtered);drawScatterChart(filtered);drawMap(filtered);updateKPI(filtered);
+}
+
+function setMapMode(mode,btn){mapMode=mode;document.querySelectorAll('.map-mode-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');update();}
+function switchRTab(name,el){
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.rcontent').forEach(c=>c.classList.remove('show'));
+  el.classList.add('active');document.getElementById('rc-'+name).classList.add('show');
+  setTimeout(()=>{
+    if(name==='trend')Plotly.Plots.resize('chart-trend');
+    if(name==='compare')Plotly.Plots.resize('chart-compare');
+    if(name==='scatter')Plotly.Plots.resize('chart-scatter');
+  },50);
+}
+
+document.getElementById("puskesmas").addEventListener("change",()=>{selectedKel="all";Object.keys(ynavState).forEach(t=>{ynavState[t].idx=0;});updateKelurahan();update();});
+document.getElementById("kelurahan").addEventListener("change",()=>{Object.keys(ynavState).forEach(t=>{ynavState[t].idx=0;});updateTahun();update();});
+document.getElementById("tahun").addEventListener("change",()=>{Object.keys(ynavState).forEach(t=>{ynavState[t].idx=0;});updateIndikator();update();});
+document.getElementById("indikator").addEventListener("change",()=>{Object.keys(ynavState).forEach(t=>{ynavState[t].idx=0;});updatePenyakit();update();});
+document.getElementById("penyakit").addEventListener("change",()=>{Object.keys(ynavState).forEach(t=>{ynavState[t].idx=0;});update();});
+document.getElementById("mode_chart").addEventListener("change",update);
+document.getElementById("scatter_bulan").addEventListener("change",()=>drawScatterChart(getFiltered()));
+document.getElementById("scatter_quadrant").addEventListener("change",()=>drawScatterChart(getFiltered()));
+document.getElementById("scatter_labels").addEventListener("change",()=>drawScatterChart(getFiltered()));
+
+// Mulai: load data lalu inisialisasi
+loadAllData();
+</script>
+</body>
+</html>
