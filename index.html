@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Analisis Geospasial Imunisasi Kota Malang</title>
+<title>Web-Based GIS Imunisasi Kota Malang</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2/plotly.min.js" onerror="document.write('&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.32.0/plotly.min.js&quot;&gt;&lt;\/script&gt;')"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" onerror="document.write('&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js&quot;&gt;&lt;\/script&gt;')"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'"/>
@@ -342,8 +342,8 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
 <header>
   <div class="logo">&#128137;</div>
   <div>
-    <h1>Analisis Geospasial Perbandingan Jumlah Kelahiran Bayi dengan Imunisasi Bayi Baru Lahir Kota Malang</h1>
-    <p>2022&#8211;2025 &middot; 16 Puskesmas &middot; 57 Kelurahan &middot; Kota Malang, Jawa Timur</p>
+    <h1>Web-Based GIS Analisis Aksesibilitas Puskesmas &amp; Prioritas Cakupan Imunisasi Bayi Baru Lahir Kota Malang</h1>
+    <p>2022&#8211;2025 &middot; 16 Puskesmas &middot; 57 Kelurahan &middot; Kota Malang, Jawa Timur &middot; Sistem Informasi Geografis Berbasis Web (Web-Based GIS)</p>
   </div>
 </header>
 
@@ -399,6 +399,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
           <button class="ynav-btn" id="trend-prev" onclick="ynavStep('trend',-1)">&#8249;</button>
           <div class="ynav-pills" id="trend-pills"></div>
           <button class="ynav-btn" id="trend-next" onclick="ynavStep('trend',1)">&#8250;</button>
+          <button type="button" class="map-mode-btn" onclick="downloadHiResChart('chart-trend','tren_imunisasi')" title="Unduh PNG resolusi tinggi untuk figur naskah">&#8659; PNG HD</button>
         </div>
         <div id="chart-trend"></div>
         <div id="trend-custom-legend" class="trend-custom-legend"></div>
@@ -410,6 +411,7 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
           <button class="ynav-btn" id="compare-prev" onclick="ynavStep('compare',-1)">&#8249;</button>
           <div class="ynav-pills" id="compare-pills"></div>
           <button class="ynav-btn" id="compare-next" onclick="ynavStep('compare',1)">&#8250;</button>
+          <button type="button" class="map-mode-btn" onclick="downloadHiResChart('chart-compare','perbandingan_imunisasi')" title="Unduh PNG resolusi tinggi untuk figur naskah">&#8659; PNG HD</button>
         </div>
         <div id="chart-compare"></div>
       </div>
@@ -417,6 +419,12 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
       <!-- TAB KORELASI SPASIAL -->
       <div class="rcontent" id="rc-scatter">
         <div class="scatter-ctrl-bar">
+          <label>Indikator Hasil (Y):</label>
+          <select id="scatter_metric">
+            <option value="coverage">Cakupan &#8211; Dosis / Bayi Lahir (Ternormalisasi)</option>
+            <option value="total">Total Dosis Imunisasi (Mentah)</option>
+          </select>
+          <div class="s-sep"></div>
           <label>Bulan:</label>
           <select id="scatter_bulan">
             <option value="all">Semua Bulan</option>
@@ -439,6 +447,8 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
             <option value="hover">Saat Hover</option>
             <option value="show">Selalu Tampil</option>
           </select>
+          <div class="s-sep"></div>
+          <button type="button" class="map-mode-btn" onclick="downloadHiResChart('chart-scatter','korelasi_jarak_imunisasi')" title="Unduh PNG resolusi tinggi untuk figur naskah">&#8659; PNG HD</button>
         </div>
 
         <div id="scatter-ynav" class="ynav-bar">
@@ -460,8 +470,10 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
         <div class="scatter-bottom-bar">
           <div class="scatter-info-row">
             <div class="info-pill"><span class="pill-label">X:</span><span class="pill-val">Jarak Ke Puskesmas (Km)</span></div>
-            <div class="info-pill"><span class="pill-label">Y:</span><span class="pill-val">Total Imunisasi</span></div>
+            <div class="info-pill"><span class="pill-label">Y:</span><span class="pill-val" id="y-metric-display">Cakupan (Dosis/Bayi Lahir)</span></div>
             <div class="info-pill info-pill-r"><span class="pill-label">r (Pearson):</span><span class="pill-val" id="r-value-display">&#8212;</span></div>
+            <div class="info-pill info-pill-r"><span class="pill-label">Sig.:</span><span class="pill-val" id="p-value-display">&#8212;</span></div>
+            <div class="info-pill info-pill-r"><span class="pill-label">n:</span><span class="pill-val" id="n-value-display">&#8212;</span></div>
             <div class="vsep-inline"></div>
             <div class="sleg-item"><div class="sleg-dot" style="background:#639922;border:1.5px solid #3B6D11;"></div>Q1: Dekat &amp; Tinggi</div>
             <div class="sleg-item"><div class="sleg-dot" style="background:#378ADD;border:1.5px solid #185FA5;"></div>Q2: Jauh &amp; Tinggi</div>
@@ -473,6 +485,12 @@ select:focus, select:hover { border-color: var(--accent); box-shadow: 0 0 0 2px 
             </div>
           </div>
         </div>
+
+        <!-- Peringatan kelengkapan data -->
+        <div class="scatter-warning" id="scatter-data-warning" style="display:none;background:#FEF3C7;border:1px solid #FBBF24;color:#7C4A03;border-radius:8px;padding:6px 12px;margin:6px 0;font-size:11px;line-height:1.5;"></div>
+
+        <!-- 3 Kelurahan Prioritas Utama -->
+        <div class="priority-box" id="priority-box" style="background:#FCEBEB;border:1px solid #F7C1C1;color:#791F1F;border-radius:8px;padding:8px 12px;margin:6px 0;font-size:11.5px;line-height:1.6;"></div>
 
         <!-- Ringkasan statistik -->
         <div class="stat-summary-box">
@@ -1083,6 +1101,61 @@ function drawCompareChart(filtered){
 }
 
 // =========================================
+// INFERENTIAL STATISTICS (Pearson r -> t-test -> p-value)
+// Ditambahkan untuk menjawab catatan reviewer: laporan korelasi harus
+// disertai uji signifikansi (p-value), bukan hanya nilai r mentah.
+// =========================================
+function logGamma(x){
+  const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,
+    771.32342877765313,-176.61502916214059,12.507343278686905,
+    -0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(x<0.5)return Math.log(Math.PI/Math.sin(Math.PI*x))-logGamma(1-x);
+  x-=1;let a=c[0];const t=x+g+0.5;
+  for(let i=1;i<g+2;i++)a+=c[i]/(x+i);
+  return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);
+}
+function betaCF(x,a,b){
+  const MAXIT=200,EPS=3e-9,FPMIN=1e-30;
+  const qab=a+b,qap=a+1,qam=a-1;
+  let c=1,d=1-qab*x/qap;
+  if(Math.abs(d)<FPMIN)d=FPMIN;
+  d=1/d;let h=d;
+  for(let m=1;m<=MAXIT;m++){
+    const m2=2*m;
+    let aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;
+    d=1/d;h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;
+    d=1/d;const del=d*c;h*=del;
+    if(Math.abs(del-1)<EPS)break;
+  }
+  return h;
+}
+function incompleteBeta(x,a,b){
+  if(x<=0)return 0; if(x>=1)return 1;
+  const bt=Math.exp(logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(x)+b*Math.log(1-x));
+  if(x<(a+1)/(a+b+2))return bt*betaCF(x,a,b)/a;
+  return 1-bt*betaCF(1-x,b,a)/b;
+}
+function tTwoTailedP(t,df){
+  if(!isFinite(t)||df<=0)return NaN;
+  const x=df/(df+t*t);
+  return incompleteBeta(x,df/2,0.5);
+}
+// Mengembalikan {t, df, p} dari r Pearson dan jumlah sampel n (uji dua arah, H0: rho=0)
+function pearsonSignificance(r,n){
+  const df=n-2;
+  if(isNaN(r)||df<1)return{t:NaN,df:df,p:NaN};
+  if(Math.abs(r)>=1)return{t:Infinity,df:df,p:0};
+  const t=r*Math.sqrt(df/(1-r*r));
+  const p=tTwoTailedP(t,df);
+  return{t,df,p};
+}
+
+// =========================================
 // DRAW SCATTER
 // =========================================
 function drawScatterChart(filtered){
@@ -1090,6 +1163,9 @@ function drawScatterChart(filtered){
   const activeYear=getActiveYear('scatter'),bulanSel=document.getElementById("scatter_bulan").value;
   const showQuad=document.getElementById("scatter_quadrant").value==="show";
   const showLabels=document.getElementById("scatter_labels").value==="show";
+  const metric=document.getElementById("scatter_metric").value; // 'coverage' (ternormalisasi) atau 'total' (mentah)
+  document.getElementById('y-metric-display').textContent=metric==='coverage'
+    ?'Cakupan (Dosis/Bayi Lahir)':'Total Imunisasi (Dosis)';
 
   const imunMap={};
   filtered.filter(d=>{
@@ -1114,20 +1190,25 @@ function drawScatterChart(filtered){
     if(d.puskesmas_map)pusByKel[d.kelurahan_shp]=d.puskesmas_map;
   });
 
-  const kels=[...new Set(Object.keys(imunMap))].filter(k=>jarakMap[k]!=null&&(imunMap[k]||0)>0);
+  const kels=[...new Set(Object.keys(imunMap))].filter(k=>jarakMap[k]!=null&&(imunMap[k]||0)>0&&(bayiMap[k]||0)>0);
   const nodataEl=document.getElementById('scatter-nodata');
   if(kels.length===0){
     nodataEl.classList.add('show');
     Plotly.purge('chart-scatter');
     document.getElementById('r-value-display').textContent='\u2014';
-    updateScatterCards([],[],[],null,null,activeYear,bulanSel,pus,kelSel);
+    document.getElementById('p-value-display').textContent='\u2014';
+    document.getElementById('n-value-display').textContent='\u2014';
+    document.getElementById('scatter-data-warning').style.display='none';
+    document.getElementById('priority-box').innerHTML='';
+    updateScatterCards([],[],[],null,null,activeYear,bulanSel,pus,kelSel,null,null,{},{},null,'coverage',57);
     return;
   }
   nodataEl.classList.remove('show');
 
   const xVals=kels.map(k=>jarakMap[k]);
-  const yVals=kels.map(k=>imunMap[k]);
+  const yVals=kels.map(k=>metric==='coverage'?(imunMap[k]/(bayiMap[k]||1)):imunMap[k]);
   const bVals=kels.map(k=>bayiMap[k]||0);
+  const TOTAL_KEL=57; // total kelurahan Kota Malang (lihat header)
 
   const xSorted=[...xVals].sort((a,b)=>a-b);
   const ySorted=[...yVals].sort((a,b)=>a-b);
@@ -1155,6 +1236,20 @@ function drawScatterChart(filtered){
   const intercept=(sY-slope*sX)/n;
 
   document.getElementById('r-value-display').textContent=isNaN(rVal)?'\u2014':rVal.toFixed(3);
+  const sig=pearsonSignificance(rVal,n);
+  const isSig=(!isNaN(sig.p)&&sig.p<0.05);
+  document.getElementById('p-value-display').textContent=isNaN(sig.p)?'\u2014':(sig.p<0.001?'p < 0.001':'p = '+sig.p.toFixed(3));
+  document.getElementById('p-value-display').style.color=isNaN(sig.p)?'':(isSig?'#16a34a':'#dc2626');
+  document.getElementById('n-value-display').textContent=n+' / '+TOTAL_KEL;
+
+  const warnEl=document.getElementById('scatter-data-warning');
+  const MIN_RELIABLE_N=Math.round(TOTAL_KEL*0.4); // ambang minimal utk interpretasi yg wajar (~40% dr 57 kelurahan)
+  if(n<MIN_RELIABLE_N){
+    warnEl.style.display='block';
+    warnEl.innerHTML=`&#9888;&#65039; <strong>Data tidak lengkap:</strong> hanya <strong>${n} dari ${TOTAL_KEL} kelurahan</strong> (${(n/TOTAL_KEL*100).toFixed(0)}%) memiliki data imunisasi &amp; kelahiran bayi lengkap untuk filter saat ini. Korelasi dan pembagian kuadran pada sampel sekecil ini bersifat eksploratif, rentan terhadap perubahan besar antar tahun, dan <strong>tidak dapat digeneralisasi</strong> ke seluruh Kota Malang. Gunakan tampilan &quot;Semua Tahun&quot; (basis 57 kelurahan) untuk kesimpulan yang lebih stabil.`;
+  }else{
+    warnEl.style.display='none';warnEl.innerHTML='';
+  }
 
   const xMin=Math.min(...xVals),xMax=Math.max(...xVals);
   const yMin=Math.min(...yVals),yMax=Math.max(...yVals);
@@ -1166,9 +1261,10 @@ function drawScatterChart(filtered){
     const qkels=kels.filter((_,i)=>getQIdx(xVals[i],yVals[i])===qi);
     if(qkels.length===0)return;
     const qx=qkels.map(k=>jarakMap[k]);
-    const qy=qkels.map(k=>imunMap[k]);
+    const qy=qkels.map(k=>metric==='coverage'?(imunMap[k]/(bayiMap[k]||1)):imunMap[k]);
     const qb=qkels.map(k=>bayiMap[k]||0);
     const qsz=qb.map(v=>Math.max(8,Math.min(36,(v/maxBayi)*28+8)));
+    const yLabel=metric==='coverage'?'Cakupan (Dosis/Bayi)':'Total Imunisasi';
     traces.push({
       x:qx,y:qy,mode:showLabels?'markers+text':'markers',type:'scatter',
       name:qm.label,
@@ -1179,14 +1275,15 @@ function drawScatterChart(filtered){
         kel_to_pus_js[k]||pusByKel[k]||'\u2014',
         (qb[i]||0).toLocaleString('id-ID'),
         qx[i].toFixed(2),
-        qy[i].toLocaleString('id-ID'),
-        qm.label,k
+        metric==='coverage'?qy[i].toFixed(2):qy[i].toLocaleString('id-ID'),
+        qm.label,k,(imunMap[k]||0).toLocaleString('id-ID')
       ]),
       hovertemplate:
         '<span style="color:#1e293b;font-size:13px;font-weight:700">%{customdata[5]}</span><br>'+
         '<span style="color:#1e293b;">Puskesmas: <b>%{customdata[0]}</b></span><br>'+
         '<span style="color:#1e293b;">Jarak Ke PKM: <b>%{customdata[2]} Km</b></span><br>'+
-        '<span style="color:#1e293b;">Total Imunisasi: <b>%{customdata[3]}</b></span><br>'+
+        `<span style="color:#1e293b;">${yLabel}: <b>%{customdata[3]}</b></span><br>`+
+        '<span style="color:#1e293b;">Total Dosis Mentah: <b>%{customdata[6]}</b></span><br>'+
         '<span style="color:#1e293b;">Bayi Lahir: <b>%{customdata[1]}</b></span><br>'+
         '<b style="color:#1e293b;font-size:12px;font-weight:800">%{customdata[4]}</b>'+
         '<extra></extra>'
@@ -1224,19 +1321,21 @@ function drawScatterChart(filtered){
     }));
     annotations.push(
       {xref:'x',yref:'paper',x:medX,y:1.02,text:`Med. Jarak ${medX.toFixed(1)} Km`,showarrow:false,font:{size:8,color:'#94a3b8'},xanchor:'center'},
-      {xref:'paper',yref:'y',x:1.01,y:medY,text:`Med. ${medY.toLocaleString('id-ID')}`,showarrow:false,font:{size:8,color:'#94a3b8'},xanchor:'left'}
+      {xref:'paper',yref:'y',x:1.01,y:medY,text:`Med. ${metric==='coverage'?medY.toFixed(2):medY.toLocaleString('id-ID')}`,showarrow:false,font:{size:8,color:'#94a3b8'},xanchor:'left'}
     );
   }
 
   const yearLabel=activeYear?` - ${activeYear}`:' - Semua Tahun';
   const bulanLabel=bulanSel!=='all'?` - ${bulanSel.charAt(0).toUpperCase()+bulanSel.slice(1)}`:'';
+  const yTitle=metric==='coverage'?'Cakupan Imunisasi (Dosis per Bayi Lahir)':'Total Imunisasi (Dosis Mentah)';
+  const yTickFmt=metric==='coverage'?',.1f':',d';
   Plotly.newPlot('chart-scatter',traces,{
     ...LAYOUT_BASE,
-    title:{text:`Jarak Ke Puskesmas Vs Total Imunisasi${yearLabel}${bulanLabel}`,font:{size:12,color:'#1e293b'}},
+    title:{text:`Jarak Ke Puskesmas Vs ${yTitle}${yearLabel}${bulanLabel}`,font:{size:12,color:'#1e293b'}},
     shapes,annotations,
     margin:{t:55,l:68,r:44,b:65},
     xaxis:{...LAYOUT_BASE.xaxis,title:{text:'Jarak Ke Puskesmas (Km) - Aksesibilitas Geografis',font:{size:10}},range:[xMinR,xMaxR],zeroline:false},
-    yaxis:{...LAYOUT_BASE.yaxis,title:{text:'Total Imunisasi',font:{size:10}},range:[yMinR,yMaxR],zeroline:false,tickformat:',d'},
+    yaxis:{...LAYOUT_BASE.yaxis,title:{text:yTitle,font:{size:10}},range:[yMinR,yMaxR],zeroline:false,tickformat:yTickFmt},
     legend:{orientation:'h',y:-0.24,font:{size:9}},
     hoverlabel:{bgcolor:'#ffffff',bordercolor:'#e2e8f0',font:{family:'Plus Jakarta Sans, sans-serif',size:12,color:'#1e293b'}}
   },{responsive:true,displayModeBar:false});
@@ -1245,38 +1344,51 @@ function drawScatterChart(filtered){
     name:k,pus:kel_to_pus_js[k]||pusByKel[k]||'\u2014',
     jarak:xVals[i],imun:yVals[i],bayi:bVals[i],qIdx:getQIdx(xVals[i],yVals[i])
   }));
-  updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pus,kelSel,medX,medY);
+  updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pus,kelSel,medX,medY,sig,isSig,MIN_RELIABLE_N,metric,TOTAL_KEL);
 }
 
 // =========================================
 // SCATTER CARDS
 // =========================================
-function updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pusF,kelF,medX,medY){
+function updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pusF,kelF,medX,medY,sig,isSig,minReliableN,metric,totalKel){
   const summaryEl=document.getElementById('stat-summary-text');
   const chipsEl=document.getElementById('stat-chips');
   const cardsEl=document.getElementById('quad-cards-grid');
+  const priorityEl=document.getElementById('priority-box');
 
   if(!kelData||kelData.length===0){
     summaryEl.innerHTML=`<em style="color:#94a3b8">Tidak ada data. Ubah filter untuk melihat analisis.</em>`;
-    chipsEl.innerHTML=''; cardsEl.innerHTML=''; return;
+    chipsEl.innerHTML=''; cardsEl.innerHTML=''; if(priorityEl)priorityEl.innerHTML=''; return;
   }
 
+  sig=sig||{p:NaN,df:NaN};
+  const yLabel=metric==='coverage'?'dosis/bayi lahir':'dosis';
   const groups=[[],[],[],[]];
   kelData.forEach(d=>groups[d.qIdx].push(d));
 
   const r=isNaN(rVal)?'N/A':rVal.toFixed(3);
+  const pTxt=isNaN(sig.p)?'N/A':(sig.p<0.001?'< 0,001':sig.p.toFixed(3).replace('.',','));
   const arah=(!isNaN(rVal)&&rVal<0)?'negatif':'positif';
   const kuat=isNaN(rVal)?'\u2014':Math.abs(rVal)>=0.6?'kuat':Math.abs(rVal)>=0.35?'sedang':'lemah';
-  const avgImun=Math.round(yVals.reduce((a,b)=>a+b,0)/yVals.length);
+  const avgImun=yVals.reduce((a,b)=>a+b,0)/yVals.length;
+  const avgTxt=metric==='coverage'?avgImun.toFixed(2):Math.round(avgImun).toLocaleString('id-ID');
   const tahunTeks=activeYear||'semua tahun';
-  const q4Worst=groups[3].sort((a,b)=>a.imun-b.imun).slice(0,3).map(d=>d.name).join(', ');
+  const q4Sorted=groups[3].sort((a,b)=>a.imun-b.imun);
+  const top3=q4Sorted.slice(0,3);
 
-  let summary=`Tahun <strong>${tahunTeks}</strong>: rata-rata imunisasi <strong>${avgImun.toLocaleString('id-ID')}</strong> dosis per kelurahan. `;
-  summary+=`Korelasi Pearson jarak&#8211;imunisasi bersifat <strong>${arah} ${kuat}</strong> (r&nbsp;=&nbsp;${r}, n&nbsp;=&nbsp;${n}). `;
-  if(!isNaN(rVal)&&rVal<-0.3)summary+=`Semakin jauh akses ke puskesmas, imunisasi cenderung lebih rendah.`;
-  else if(!isNaN(rVal)&&rVal<0)summary+=`Ada kecenderungan lemah bahwa wilayah yang jauh sedikit lebih rendah imunisasinya.`;
-  else summary+=`Jarak belum menjadi penentu utama aktivitas imunisasi &#8212; faktor lain lebih dominan.`;
-  if(groups[3].length>0&&q4Worst)summary+=` Prioritas intervensi Q4: <strong style="color:#A32D2D">${q4Worst}</strong>.`;
+  // ── Narasi ringkasan: klaim hubungan hanya disampaikan jika signifikan (p < 0,05) ──
+  let summary=`Tahun <strong>${tahunTeks}</strong> (n = <strong>${n}</strong> dari ${totalKel} kelurahan): rata-rata ${metric==='coverage'?'cakupan':'total imunisasi'} <strong>${avgTxt}</strong> ${yLabel} per kelurahan. `;
+  summary+=`Korelasi Pearson jarak&#8211;${metric==='coverage'?'cakupan':'imunisasi'} adalah <strong>r = ${r}</strong> (arah ${arah}, kekuatan ${kuat}), diuji dengan uji-t dua arah: <strong>p ${pTxt}</strong>. `;
+  if(n<3||isNaN(sig.p)){
+    summary+=`Jumlah sampel terlalu kecil untuk diuji signifikansinya.`;
+  }else if(isSig){
+    summary+=`Hasil ini <strong style="color:#16a34a">signifikan secara statistik pada &#945; = 0,05</strong>, sehingga ada bukti hubungan linier antara jarak ke puskesmas dan ${metric==='coverage'?'cakupan imunisasi':'jumlah imunisasi'}.`;
+  }else{
+    summary+=`Hasil ini <strong style="color:#dc2626">tidak signifikan secara statistik</strong> (p &#8805; 0,05), sehingga <u>belum cukup bukti</u> untuk menyimpulkan adanya hubungan linier antara jarak dan ${metric==='coverage'?'cakupan':'jumlah'} imunisasi pada tahun ini &#8212; nilai r di atas sebaiknya dibaca sebagai deskriptif, bukan inferensial.`;
+  }
+  if(n<minReliableN){
+    summary+=` <span style="color:#B45309">Catatan: sampel tahun ini hanya mencakup ${n} dari ${totalKel} kelurahan, sehingga hasil bersifat eksploratif.</span>`;
+  }
   summaryEl.innerHTML=summary;
 
   const chipDefs=[
@@ -1285,22 +1397,37 @@ function updateScatterCards(kelData,xVals,yVals,rVal,n,activeYear,bulanSel,pusF,
     {cls:'chip-q3',label:`Q3 Investigasi: ${groups[2].length}`},
     {cls:'chip-q4',label:`Q4 Prioritas: ${groups[3].length}`},
     {cls:'chip-neutral',label:`r = ${r} (Pearson)`},
-    {cls:'chip-neutral',label:`Avg: ${avgImun.toLocaleString('id-ID')} Dosis`},
+    {cls:'chip-neutral',label:`p ${pTxt}${isSig?' (signifikan)':' (tdk signifikan)'}`},
+    {cls:'chip-neutral',label:`n = ${n}/${totalKel}`},
   ];
   chipsEl.innerHTML=chipDefs.map(c=>`<span class="stat-chip ${c.cls}">${c.label}</span>`).join('');
+
+  // ── 3 Kelurahan Prioritas Utama (jauh dari puskesmas & cakupan/imunisasi terendah, kuadran Q4) ──
+  if(priorityEl){
+    if(top3.length===0){
+      priorityEl.innerHTML=`<strong>3 Kelurahan Prioritas Utama:</strong> tidak ada kelurahan pada kuadran Q4 (jauh &amp; rendah) untuk filter saat ini.`;
+    }else{
+      const fmtName=s=>s.charAt(0)+s.slice(1).toLowerCase();
+      const listHtml=top3.map((d,i)=>{
+        const valTxt=metric==='coverage'?d.imun.toFixed(2):Math.round(d.imun).toLocaleString('id-ID');
+        return `<strong>${i+1}. ${fmtName(d.name)}</strong> (${d.pus} &#183; ${d.jarak.toFixed(2)} km &#183; ${valTxt} ${yLabel})`;
+      }).join(' &nbsp;&nbsp; ');
+      priorityEl.innerHTML=`&#128204; <strong>3 Kelurahan Prioritas Utama (Q4 &#8211; jauh &amp; ${metric==='coverage'?'cakupan':'imunisasi'} terendah):</strong><br>${listHtml}`;
+    }
+  }
 
   cardsEl.innerHTML=QUAD_META.map((qm,qi)=>{
     const kels=groups[qi];
     const sorted=[...kels].sort((a,b)=>b.imun-a.imun);
     const kelRows=sorted.length===0
       ?`<div class="qcard-empty">Tidak Ada Kelurahan</div>`
-      :`<div class="qcard-kel-header"><span>Kelurahan</span><span>Puskesmas</span><span style="text-align:right">Jarak PKM</span><span style="text-align:right">Imunisasi</span></div>
+      :`<div class="qcard-kel-header"><span>Kelurahan</span><span>Puskesmas</span><span style="text-align:right">Jarak PKM</span><span style="text-align:right">${metric==='coverage'?'Cakupan':'Imunisasi'}</span></div>
         <div class="qcard-kel-list">
           ${sorted.map(k=>`<div class="qcard-kel-row">
             <span class="qcard-kel-name">${k.name.charAt(0)+k.name.slice(1).toLowerCase()}</span>
             <span class="qcard-kel-pus">${k.pus}</span>
             <span class="qcard-kel-jarak">${k.jarak.toFixed(2)} Km</span>
-            <span class="qcard-kel-val">${k.imun.toLocaleString('id-ID')}</span>
+            <span class="qcard-kel-val">${metric==='coverage'?k.imun.toFixed(2):k.imun.toLocaleString('id-ID')}</span>
           </div>`).join('')}
         </div>`;
     return `<div class="qcard ${qm.cls}">
@@ -1330,7 +1457,7 @@ function updateKPI(filtered){
   rowsBayi.forEach(d=>{bayiPerKel[d.kelurahan_shp]=(bayiPerKel[d.kelurahan_shp]||0)+(d.jumlah||0);});
   const kelImunSet=new Set(Object.keys(imunPerKel).filter(k=>imunPerKel[k]>0));
   const kelBayiSet=new Set(Object.keys(bayiPerKel).filter(k=>bayiPerKel[k]>0));
-  const kelBothCount=kelImunSet.size;
+  const kelBothCount=[...kelImunSet].filter(k=>kelBayiSet.has(k)).length;
   const kelImunEntries=Object.entries(imunPerKel).filter(([,v])=>v>0);
   let maxKel='\u2014',maxVal=0,minKel='\u2014',minVal=Infinity;
   kelImunEntries.forEach(([k,v])=>{if(v>maxVal){maxVal=v;maxKel=k;}if(v<minVal){minVal=v;minKel=k;}});
@@ -1387,6 +1514,10 @@ function update(){
   drawTrend(filtered);drawCompareChart(filtered);drawScatterChart(filtered);drawMap(filtered);updateKPI(filtered);
 }
 
+// Unduh grafik sebagai PNG resolusi tinggi (untuk kebutuhan publikasi / figur naskah)
+function downloadHiResChart(divId,filename){
+  Plotly.downloadImage(divId,{format:'png',filename:filename,width:2400,height:1500,scale:1});
+}
 function setMapMode(mode,btn){mapMode=mode;document.querySelectorAll('.map-mode-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');update();}
 function switchRTab(name,el){
   document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
@@ -1405,6 +1536,7 @@ document.getElementById("tahun").addEventListener("change",()=>{Object.keys(ynav
 document.getElementById("indikator").addEventListener("change",()=>{Object.keys(ynavState).forEach(t=>{ynavState[t].idx=0;});updatePenyakit();update();});
 document.getElementById("penyakit").addEventListener("change",()=>{Object.keys(ynavState).forEach(t=>{ynavState[t].idx=0;});update();});
 document.getElementById("mode_chart").addEventListener("change",update);
+document.getElementById("scatter_metric").addEventListener("change",()=>drawScatterChart(getFiltered()));
 document.getElementById("scatter_bulan").addEventListener("change",()=>drawScatterChart(getFiltered()));
 document.getElementById("scatter_quadrant").addEventListener("change",()=>drawScatterChart(getFiltered()));
 document.getElementById("scatter_labels").addEventListener("change",()=>drawScatterChart(getFiltered()));
